@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>KTU 2024 Scheme SGPA & CGPA Calculator</title>
+<style>
+  :root{--bg:#071020;--card:#0b1622;--muted:#9aa4b2;--accent:#60a5fa;--pass:#14382a;--fail:#7f1d1d}
+  *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial}
+  body{margin:0;background:var(--bg);color:#e6eef6;padding:18px}
+  .wrap{max-width:980px;margin:18px auto}
+  h1{margin:0 0 6px;font-size:20px}
+  p.lead{margin:0 0 12px;color:var(--muted);font-size:13px}
+  .card{background:var(--card);padding:14px;border-radius:10px;margin-bottom:14px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  button{border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:600}
+  .btn-primary{background:linear-gradient(90deg,var(--accent),#2563eb);color:#021226}
+  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.08);color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin-top:6px}
+  th,td{padding:8px;text-align:left;font-size:13px;color:#e6eef6}
+  th{color:var(--muted);font-weight:600}
+  tr + tr td{border-top:1px solid rgba(255,255,255,.03)}
+  input[type=number], input[type=text], select{background:transparent;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:6px;color:inherit;width:100%}
+  .small{font-size:12px;color:var(--muted)}
+  .summary{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+  .stat{background:#071422;padding:10px;border-radius:8px;min-width:160px}
+  .stat .big{font-weight:700;font-size:18px}
+  .pass{background:rgba(20,83,45,.12)}
+  .fail{background:rgba(127,29,29,.12)}
+  .muted-note{color:var(--muted);font-size:12px;margin-top:8px}
+  footer{margin-top:12px;color:var(--muted);font-size:12px;text-align:center;opacity:.9}
+  .col-center{text-align:center}
+  .tiny{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>KTU 2024 Scheme SGPA & CGPA Calculator</h1>
+  <p class="lead">Usage: add semesters, add custom courses & workshops, enter CIA (out of 40) and ESE (out of 60 / 50 for workshops). Clear each sem after adding sem to proceed with the next sem. FE / F rules apply.</p>
+
+  <div class="card" id="semesterCard">
+    <div class="controls">
+      <button class="btn-primary" id="addCourseBtn">+ Add Course</button>
+      <button class="btn-primary" id="addWorkshopBtn">+ Add Workshop</button>
+      <button class="btn-ghost" id="clearSemesterBtn">Clear Semester</button>
+      <div style="flex:1"></div>
+      <div class="tiny"> •CIA = out of 40, ESE = out of 60 (50 CIE+50 ESE for workshop. Adjust marks for workshops accordingly.)</div>
+    </div>
+
+    <table aria-describedby="semester-table">
+      <thead>
+        <tr>
+          <th style="width:28%">Course name</th>
+          <th style="width:7%">Type</th>
+          <th style="width:8%">Credits</th>
+          <th style="width:12%">CIA (0–40)</th>
+          <th style="width:12%">ESE</th>
+          <th style="width:9%">% total</th>
+          <th style="width:8%">Grade</th>
+          <th style="width:8%">GPA</th>
+          <th style="width:6%"></th>
+        </tr>
+      </thead>
+      <tbody id="courseBody"></tbody>
+    </table>
+
+    <div class="summary">
+      <div class="stat"><div class="small">Total credits (semester)</div><div class="big" id="totalCredits">0</div></div>
+      <div class="stat"><div class="small">SGPA (this sem)</div><div class="big" id="sgpa">0.00</div></div>
+      <div style="flex:1"></div>
+      <div class="stat col-center"><button class="btn-primary" id="addSemToCgpa">+ Add Sem to CGPA</button></div>
+    </div>
+
+    <div class="muted-note">Rules: ESE must be ≥ 40% of that course's ESE max. If ESE < 40% → <strong>F</strong>. If ESE ≥ 40% but (CIA + ESE) &lt; 50% → <strong>FE</strong>. GPA is per the grade mapping; SGPA & CGPA use grade point average in calculation. (F/FE = 0 GPA).</div>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <div class="small" style="padding-top:6px">CGPA semesters</div>
+      <div style="flex:1"></div>
+      <button class="btn-ghost" id="resetCgpaBtn">Reset CGPA</button>
+    </div>
+
+    <table>
+      <thead><tr><th>Semester</th><th>SGPA</th><th>Credits</th><th></th></tr></thead>
+      <tbody id="cgpaBody"></tbody>
+    </table>
+
+    <div class="summary">
+      <div class="stat"><div class="small">CGPA</div><div class="big" id="cgpa">0.00</div></div>
+    </div>
+  </div>
+
+  <footer>KTU SGPA and CGPA Calculator Tool — Mohamed Afnnan</footer>
+</div>
+
+<script>
+/* Minimal SGPA / CGPA tool
+   - Custom courses only
+   - Workshops toggle changes ESE max to 50 and ESE-min logic
+   - CIA is out of 40, ESE out of 60 (or 50 for workshop)
+   - FE / F logic per ESE minimum (40% of ESE max) and total >=50
+   - Grade mapping S/A+/A/.../P/F with grade points
+   - SGPA uses all credits (including failed courses) and GP=0 for F/FE
+   - CGPA is weighted average of semester SGPAs by semester credits (credits counted are same as used for SGPA)
+*/
+
+const courseBody = document.getElementById('courseBody');
+const totalCreditsEl = document.getElementById('totalCredits');
+const sgpaEl = document.getElementById('sgpa');
+const cgpaBody = document.getElementById('cgpaBody');
+const cgpaEl = document.getElementById('cgpa');
+
+const addCourseBtn = document.getElementById('addCourseBtn');
+const addWorkshopBtn = document.getElementById('addWorkshopBtn');
+const clearSemesterBtn = document.getElementById('clearSemesterBtn');
+const addSemToCgpaBtn = document.getElementById('addSemToCgpa');
+const resetCgpaBtn = document.getElementById('resetCgpaBtn');
+
+let cgpaSems = []; // {sgpa, credits}
+
+/* Grade mapping: percent -> (grade, gp) */
+function gradeFromPercent(p){
+  if(p>=90) return ['S',10];
+  if(p>=85) return ['A+',9];
+  if(p>=80) return ['A',8.5];
+  if(p>=75) return ['B+',8];
+  if(p>=70) return ['B',7.5];
+  if(p>=65) return ['C+',7];
+  if(p>=60) return ['C',6.5];
+  if(p>=55) return ['D',6];
+  if(p>=50) return ['P',5.5];
+  return ['F',0];
+}
+
+/* Create a row (isWorkshop boolean) */
+function createRow(isWorkshop=false){
+  const tr = document.createElement('tr');
+
+  // default values
+  const nameVal = '';
+  const type = isWorkshop ? 'Workshop' : 'Regular';
+  const creditsVal = 3;
+  const ciaVal = '';
+  const eseVal = '';
+
+  tr.innerHTML = `
+    <td><input type="text" placeholder="Course name" value="${nameVal}" style="width:100%"></td>
+    <td class="tiny">${type}</td>
+    <td><input type="number" min="0" step="0.5" value="${creditsVal}" style="width:70px"></td>
+    <td><input type="number" min="0" max="40" placeholder="0" style="width:80px"></td>
+    <td><input type="number" min="0" placeholder="0" style="width:80px"></td>
+    <td class="small">-</td>
+    <td class="small">-</td>
+    <td class="small">-</td>
+    <td class="col-center"><button class="btn-ghost">Del</button></td>
+  `;
+
+  // attach dataset so we know workshop
+  tr.dataset.isWorkshop = isWorkshop ? '1' : '0';
+  // add event listeners
+  tr.querySelectorAll('input').forEach(inp => inp.addEventListener('input', calcSemester));
+  tr.querySelector('button').addEventListener('click', () => { tr.remove(); calcSemester(); });
+
+  // if workshop, adjust ESE max placeholder and CIA/ESE hints
+  if(isWorkshop){
+    const eseInput = tr.children[4].querySelector('input');
+    eseInput.max = 50;
+    eseInput.placeholder = '0 (max 50)';
+    const ciaInput = tr.children[3].querySelector('input');
+    ciaInput.max = 50; // workshops CIA out of 50 per your earlier note? user asked workshop: sessional is out of 50 and ESE out of 50. But previously we set CIA out of 40 generally. The user's simplified request said "Add internals (out of 40). Add ESE marks (out of 60) for courses if it is a workshop ... sessional is out of 50". To follow exactly: CIA out of 40 for regular, but for workshop CIA should be out of 50.
+    // set attributes and placeholders accordingly:
+    ciaInput.placeholder = '0 (max 50)';
+  } else {
+    const ciaInput = tr.children[3].querySelector('input');
+    ciaInput.max = 40;
+    ciaInput.placeholder = '0 (max 40)';
+    const eseInput = tr.children[4].querySelector('input');
+    eseInput.max = 60;
+    eseInput.placeholder = '0 (max 60)';
+  }
+
+  courseBody.appendChild(tr);
+  calcSemester();
+}
+
+/* Add handlers */
+addCourseBtn.addEventListener('click', () => createRow(false));
+addWorkshopBtn.addEventListener('click', () => createRow(true));
+clearSemesterBtn.addEventListener('click', () => { if(confirm('Clear all courses in this semester?')){ courseBody.innerHTML=''; calcSemester(); }});
+addSemToCgpaBtn.addEventListener('click', () => {
+  const sg = parseFloat(sgpaEl.textContent) || 0;
+  const credits = parseFloat(totalCreditsEl.textContent) || 0;
+  if(credits <= 0) return alert('No credits in this semester (add at least one course).');
+  cgpaSems.push({sgpa: sg, credits: credits});
+  renderCgpa();
+});
+resetCgpaBtn.addEventListener('click', () => { if(confirm('Reset CGPA semesters?')){ cgpaSems = []; renderCgpa(); } });
+
+/* Calculate semester: totals, grades, sgpa */
+function calcSemester(){
+  const rows = [...courseBody.children];
+  let totalCredits = 0;
+  let weightedSum = 0; // credit * gp
+  let creditsCounted = 0;
+
+  rows.forEach(tr => {
+    const isWorkshop = tr.dataset.isWorkshop === '1';
+    const nameInput = tr.children[0].querySelector('input');
+    const creditsInput = tr.children[2].querySelector('input');
+    const ciaInput = tr.children[3].querySelector('input');
+    const eseInput = tr.children[4].querySelector('input');
+
+    const credits = Number(creditsInput.value) || 0;
+    // CIA ranges: regular 0..40, workshop 0..50 (user wanted workshop sessional out of 50)
+    const cia = Number(ciaInput.value) || 0;
+    const ese = Number(eseInput.value) || 0;
+
+    // ESE max
+    const eseMax = isWorkshop ? 50 : 60;
+    // CIA max
+    const ciaMax = isWorkshop ? 50 : 40;
+
+    // cap inputs logically (not required but helpful)
+    const ciaClamped = Math.max(0, Math.min(cia, ciaMax));
+    const eseClamped = Math.max(0, Math.min(ese, eseMax));
+    if(cia !== ciaClamped) ciaInput.value = ciaClamped;
+    if(ese !== eseClamped) eseInput.value = eseClamped;
+
+    // total percentage: scale CIA + ESE to 100
+    // For regular: CIA (out of 40) + ESE (out of 60) => sum directly out of 100
+    // For workshop: CIA (out of 50) + ESE (out of 50) => sum out of 100
+    const total = ciaClamped + eseClamped;
+    const pct = Math.min(100, (isWorkshop ? total : total)); // already on 100 scale
+
+    // ESE eligibility: ESE must be >= 40% of ESE max
+    const eseMin = 0.4 * eseMax; // e.g., 24 or 20
+
+    let grade = '-';
+    let gp = '-';
+
+    if(eseClamped < eseMin){
+      grade = 'F'; gp = 0;
+    } else if(pct < 50){
+      // ESE >= 40% but total < 50 => FE
+      grade = 'FE'; gp = 0;
+    } else {
+      // normal grading by percentage
+      const [g, gpoint] = gradeFromPercent(pct);
+      grade = g; gp = gpoint;
+    }
+
+    // write back
+    tr.children[5].textContent = pct.toFixed(1) + '%';
+    tr.children[6].textContent = grade;
+    tr.children[7].textContent = (typeof gp === 'number') ? gp : '-';
+
+    // row classes
+    tr.classList.remove('pass','fail');
+    if(grade === 'F' || grade === 'FE') tr.classList.add('fail'); else tr.classList.add('pass');
+
+    // SGPA math: include credits even if F/FE (gp=0)
+    totalCredits += credits;
+    // if gp is a number, add weighted; if it's '-', treat as 0 (shouldn't happen)
+    const gpNum = (typeof gp === 'number') ? gp : 0;
+    weightedSum += credits * gpNum;
+    creditsCounted += credits;
+  });
+
+  totalCreditsEl.textContent = totalCredits.toFixed(1);
+  // SGPA: weightedSum / creditsCounted, show 2 decimals (SGPA is not rounded before)
+  const sgpa = creditsCounted ? (weightedSum / creditsCounted) : 0;
+  sgpaEl.textContent = sgpa.toFixed(2);
+}
+
+/* render CGPA table */
+function renderCgpa(){
+  cgpaBody.innerHTML = '';
+  let sum = 0, cr = 0;
+  cgpaSems.forEach((s, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>Sem ${idx+1}</td><td>${s.sgpa.toFixed(2)}</td><td>${s.credits.toFixed(1)}</td>
+      <td><button class="btn-ghost">Del</button></td>`;
+    tr.querySelector('button').addEventListener('click', () => {
+      cgpaSems.splice(idx,1); renderCgpa();
+    });
+    cgpaBody.appendChild(tr);
+    sum += s.sgpa * s.credits;
+    cr += s.credits;
+  });
+  cgpaEl.textContent = cr ? (sum / cr).toFixed(2) : '0.00';
+}
+
+/* gradeFromPercent helper (same mapping you specified) */
+function gradeFromPercent(p){
+  if(p>=90) return ['S',10];
+  if(p>=85) return ['A+',9];
+  if(p>=80) return ['A',8.5];
+  if(p>=75) return ['B+',8];
+  if(p>=70) return ['B',7.5];
+  if(p>=65) return ['C+',7];
+  if(p>=60) return ['C',6.5];
+  if(p>=55) return ['D',6];
+  if(p>=50) return ['P',5.5];
+  return ['F',0];
+}
+
+/* initial state: empty */
+calcSemester();
+renderCgpa();
+
+</script>
+</body>
+</html>
