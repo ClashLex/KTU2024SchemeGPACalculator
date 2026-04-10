@@ -78,6 +78,9 @@
     <div class="controls">
       <div class="small" style="padding-top:6px">CGPA semesters</div>
       <div style="flex:1"></div>
+      <button class="btn-ghost" id="exportBtn">Export</button>
+      <button class="btn-ghost" id="importBtn">Import</button>
+      <input type="file" id="importFile" style="display:none" accept=".json">
       <button class="btn-ghost" id="resetCgpaBtn">Reset CGPA</button>
     </div>
 
@@ -95,16 +98,6 @@
 </div>
 
 <script>
-/* Minimal SGPA / CGPA tool
-   - Custom courses only
-   - Workshops toggle changes ESE max to 50 and ESE-min logic
-   - CIA is out of 40, ESE out of 60 (or 50 for workshop)
-   - FE / F logic per ESE minimum (40% of ESE max) and total >=50
-   - Grade mapping S/A+/A/.../P/F with grade points
-   - SGPA uses all credits (including failed courses) and GP=0 for F/FE
-   - CGPA is weighted average of semester SGPAs by semester credits (credits counted are same as used for SGPA)
-*/
-
 const courseBody = document.getElementById('courseBody');
 const totalCreditsEl = document.getElementById('totalCredits');
 const sgpaEl = document.getElementById('sgpa');
@@ -117,9 +110,44 @@ const clearSemesterBtn = document.getElementById('clearSemesterBtn');
 const addSemToCgpaBtn = document.getElementById('addSemToCgpa');
 const resetCgpaBtn = document.getElementById('resetCgpaBtn');
 
-let cgpaSems = []; // {sgpa, credits}
+let cgpaSems = [];
 
-/* Grade mapping: percent -> (grade, gp) */
+function saveData(){
+  const rows = [...courseBody.children].map(tr => ({
+    name: tr.children[0].querySelector('input').value,
+    isWorkshop: tr.dataset.isWorkshop === '1',
+    credits: tr.children[2].querySelector('input').value,
+    cia: tr.children[3].querySelector('input').value,
+    ese: tr.children[4].querySelector('input').value
+  }));
+
+  localStorage.setItem("ktuCalcData", JSON.stringify({
+    currentSemester: rows,
+    cgpaSems: cgpaSems
+  }));
+}
+
+function loadData(){
+  const saved = JSON.parse(localStorage.getItem("ktuCalcData"));
+  if(!saved) return;
+
+  courseBody.innerHTML = '';
+  saved.currentSemester.forEach(c => {
+    createRow(c.isWorkshop);
+    const tr = courseBody.lastChild;
+
+    tr.children[0].querySelector('input').value = c.name;
+    tr.children[2].querySelector('input').value = c.credits;
+    tr.children[3].querySelector('input').value = c.cia;
+    tr.children[4].querySelector('input').value = c.ese;
+  });
+
+  cgpaSems = saved.cgpaSems || [];
+
+  calcSemester();
+  renderCgpa();
+}
+
 function gradeFromPercent(p){
   if(p>=90) return ['S',10];
   if(p>=85) return ['A+',9];
@@ -133,182 +161,177 @@ function gradeFromPercent(p){
   return ['F',0];
 }
 
-/* Create a row (isWorkshop boolean) */
 function createRow(isWorkshop=false){
   const tr = document.createElement('tr');
 
-  // default values
-  const nameVal = '';
-  const type = isWorkshop ? 'Workshop' : 'Regular';
-  const creditsVal = 3;
-  const ciaVal = '';
-  const eseVal = '';
-
   tr.innerHTML = `
-    <td><input type="text" placeholder="Course name" value="${nameVal}" style="width:100%"></td>
-    <td class="tiny">${type}</td>
-    <td><input type="number" min="0" step="0.5" value="${creditsVal}" style="width:70px"></td>
-    <td><input type="number" min="0" max="40" placeholder="0" style="width:80px"></td>
-    <td><input type="number" min="0" placeholder="0" style="width:80px"></td>
+    <td><input type="text" placeholder="Course name"></td>
+    <td class="tiny">${isWorkshop ? 'Workshop' : 'Regular'}</td>
+    <td><input type="number" min="0" step="0.5" value="3"></td>
+    <td><input type="number"></td>
+    <td><input type="number"></td>
     <td class="small">-</td>
     <td class="small">-</td>
     <td class="small">-</td>
     <td class="col-center"><button class="btn-ghost">Del</button></td>
   `;
 
-  // attach dataset so we know workshop
   tr.dataset.isWorkshop = isWorkshop ? '1' : '0';
-  // add event listeners
-  tr.querySelectorAll('input').forEach(inp => inp.addEventListener('input', calcSemester));
-  tr.querySelector('button').addEventListener('click', () => { tr.remove(); calcSemester(); });
 
-  // if workshop, adjust ESE max placeholder and CIA/ESE hints
-  if(isWorkshop){
-    const eseInput = tr.children[4].querySelector('input');
-    eseInput.max = 50;
-    eseInput.placeholder = '0 (max 50)';
-    const ciaInput = tr.children[3].querySelector('input');
-    ciaInput.max = 50; // workshops CIA out of 50 per your earlier note? user asked workshop: sessional is out of 50 and ESE out of 50. But previously we set CIA out of 40 generally. The user's simplified request said "Add internals (out of 40). Add ESE marks (out of 60) for courses if it is a workshop ... sessional is out of 50". To follow exactly: CIA out of 40 for regular, but for workshop CIA should be out of 50.
-    // set attributes and placeholders accordingly:
-    ciaInput.placeholder = '0 (max 50)';
-  } else {
-    const ciaInput = tr.children[3].querySelector('input');
-    ciaInput.max = 40;
-    ciaInput.placeholder = '0 (max 40)';
-    const eseInput = tr.children[4].querySelector('input');
-    eseInput.max = 60;
-    eseInput.placeholder = '0 (max 60)';
-  }
+  tr.querySelectorAll('input').forEach(inp =>
+    inp.addEventListener('input', () => {
+      calcSemester();
+      saveData();
+    })
+  );
+
+  tr.querySelector('button').addEventListener('click', () => {
+    tr.remove();
+    calcSemester();
+    saveData();
+  });
 
   courseBody.appendChild(tr);
   calcSemester();
+  saveData();
 }
 
-/* Add handlers */
 addCourseBtn.addEventListener('click', () => createRow(false));
 addWorkshopBtn.addEventListener('click', () => createRow(true));
-clearSemesterBtn.addEventListener('click', () => { if(confirm('Clear all courses in this semester?')){ courseBody.innerHTML=''; calcSemester(); }});
+
+clearSemesterBtn.addEventListener('click', () => {
+  if(confirm('Clear all courses in this semester?')){
+    courseBody.innerHTML='';
+    calcSemester();
+    saveData();
+  }
+});
+
 addSemToCgpaBtn.addEventListener('click', () => {
   const sg = parseFloat(sgpaEl.textContent) || 0;
   const credits = parseFloat(totalCreditsEl.textContent) || 0;
-  if(credits <= 0) return alert('No credits in this semester (add at least one course).');
+  if(credits <= 0) return alert('No credits.');
+
   cgpaSems.push({sgpa: sg, credits: credits});
   renderCgpa();
+  saveData();
 });
-resetCgpaBtn.addEventListener('click', () => { if(confirm('Reset CGPA semesters?')){ cgpaSems = []; renderCgpa(); } });
 
-/* Calculate semester: totals, grades, sgpa */
+resetCgpaBtn.addEventListener('click', () => {
+  if(confirm('Reset CGPA?')){
+    cgpaSems = [];
+    renderCgpa();
+    saveData();
+  }
+});
+
 function calcSemester(){
   const rows = [...courseBody.children];
   let totalCredits = 0;
-  let weightedSum = 0; // credit * gp
-  let creditsCounted = 0;
+  let weightedSum = 0;
 
   rows.forEach(tr => {
     const isWorkshop = tr.dataset.isWorkshop === '1';
-    const nameInput = tr.children[0].querySelector('input');
-    const creditsInput = tr.children[2].querySelector('input');
-    const ciaInput = tr.children[3].querySelector('input');
-    const eseInput = tr.children[4].querySelector('input');
+    const credits = Number(tr.children[2].querySelector('input').value) || 0;
+    const cia = Number(tr.children[3].querySelector('input').value) || 0;
+    const ese = Number(tr.children[4].querySelector('input').value) || 0;
 
-    const credits = Number(creditsInput.value) || 0;
-    // CIA ranges: regular 0..40, workshop 0..50 (user wanted workshop sessional out of 50)
-    const cia = Number(ciaInput.value) || 0;
-    const ese = Number(eseInput.value) || 0;
-
-    // ESE max
     const eseMax = isWorkshop ? 50 : 60;
-    // CIA max
-    const ciaMax = isWorkshop ? 50 : 40;
+    const total = cia + ese;
+    const pct = total;
 
-    // cap inputs logically (not required but helpful)
-    const ciaClamped = Math.max(0, Math.min(cia, ciaMax));
-    const eseClamped = Math.max(0, Math.min(ese, eseMax));
-    if(cia !== ciaClamped) ciaInput.value = ciaClamped;
-    if(ese !== eseClamped) eseInput.value = eseClamped;
+    const eseMin = 0.4 * eseMax;
 
-    // total percentage: scale CIA + ESE to 100
-    // For regular: CIA (out of 40) + ESE (out of 60) => sum directly out of 100
-    // For workshop: CIA (out of 50) + ESE (out of 50) => sum out of 100
-    const total = ciaClamped + eseClamped;
-    const pct = Math.min(100, (isWorkshop ? total : total)); // already on 100 scale
+    let grade, gp;
 
-    // ESE eligibility: ESE must be >= 40% of ESE max
-    const eseMin = 0.4 * eseMax; // e.g., 24 or 20
-
-    let grade = '-';
-    let gp = '-';
-
-    if(eseClamped < eseMin){
+    if(ese < eseMin){
       grade = 'F'; gp = 0;
     } else if(pct < 50){
-      // ESE >= 40% but total < 50 => FE
       grade = 'FE'; gp = 0;
     } else {
-      // normal grading by percentage
-      const [g, gpoint] = gradeFromPercent(pct);
-      grade = g; gp = gpoint;
+      [grade, gp] = gradeFromPercent(pct);
     }
 
-    // write back
     tr.children[5].textContent = pct.toFixed(1) + '%';
     tr.children[6].textContent = grade;
-    tr.children[7].textContent = (typeof gp === 'number') ? gp : '-';
+    tr.children[7].textContent = gp;
 
-    // row classes
-    tr.classList.remove('pass','fail');
-    if(grade === 'F' || grade === 'FE') tr.classList.add('fail'); else tr.classList.add('pass');
-
-    // SGPA math: include credits even if F/FE (gp=0)
     totalCredits += credits;
-    // if gp is a number, add weighted; if it's '-', treat as 0 (shouldn't happen)
-    const gpNum = (typeof gp === 'number') ? gp : 0;
-    weightedSum += credits * gpNum;
-    creditsCounted += credits;
+    weightedSum += credits * gp;
   });
 
   totalCreditsEl.textContent = totalCredits.toFixed(1);
-  // SGPA: weightedSum / creditsCounted, show 2 decimals (SGPA is not rounded before)
-  const sgpa = creditsCounted ? (weightedSum / creditsCounted) : 0;
-  sgpaEl.textContent = sgpa.toFixed(2);
+  sgpaEl.textContent = totalCredits ? (weightedSum / totalCredits).toFixed(2) : '0.00';
 }
 
-/* render CGPA table */
 function renderCgpa(){
   cgpaBody.innerHTML = '';
   let sum = 0, cr = 0;
+
   cgpaSems.forEach((s, idx) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>Sem ${idx+1}</td><td>${s.sgpa.toFixed(2)}</td><td>${s.credits.toFixed(1)}</td>
-      <td><button class="btn-ghost">Del</button></td>`;
+    tr.innerHTML = `<td>Sem ${idx+1}</td><td>${s.sgpa}</td><td>${s.credits}</td>
+    <td><button class="btn-ghost">Del</button></td>`;
+
     tr.querySelector('button').addEventListener('click', () => {
-      cgpaSems.splice(idx,1); renderCgpa();
+      cgpaSems.splice(idx,1);
+      renderCgpa();
+      saveData();
     });
+
     cgpaBody.appendChild(tr);
     sum += s.sgpa * s.credits;
     cr += s.credits;
   });
+
   cgpaEl.textContent = cr ? (sum / cr).toFixed(2) : '0.00';
 }
 
-/* gradeFromPercent helper (same mapping you specified) */
-function gradeFromPercent(p){
-  if(p>=90) return ['S',10];
-  if(p>=85) return ['A+',9];
-  if(p>=80) return ['A',8.5];
-  if(p>=75) return ['B+',8];
-  if(p>=70) return ['B',7.5];
-  if(p>=65) return ['C+',7];
-  if(p>=60) return ['C',6.5];
-  if(p>=55) return ['D',6];
-  if(p>=50) return ['P',5.5];
-  return ['F',0];
-}
+/* EXPORT */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const data = localStorage.getItem("ktuCalcData");
+  if(!data) return alert("No data to export");
 
-/* initial state: empty */
+  const blob = new Blob([data], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = "ktu-gpa-backup.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
+});
+
+/* IMPORT */
+const importFile = document.getElementById('importFile');
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  importFile.click();
+});
+
+importFile.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const data = JSON.parse(evt.target.result);
+      localStorage.setItem("ktuCalcData", JSON.stringify(data));
+      loadData();
+      alert("Data imported successfully");
+    } catch {
+      alert("Invalid file");
+    }
+  };
+  reader.readAsText(file);
+});
+
+/* INIT */
+loadData();
 calcSemester();
 renderCgpa();
-
 </script>
 </body>
 </html>
