@@ -3,61 +3,158 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>KTU 2024 Scheme SGPA & CGPA Calculator</title>
+<title>KTU 2024 SGPA & CGPA Calculator</title>
 
 <style>
-:root{--bg:#071020;--card:#0b1622;--text:#e6eef6;--muted:#9aa4b2;--accent:#60a5fa;--pass:#14382a;--fail:#7f1d1d}
-.light{--bg:#f5f7fb;--card:#ffffff;--text:#111827;--muted:#4b5563;--accent:#2563eb;--pass:#d1fae5;--fail:#fee2e2}
-*{box-sizing:border-box;font-family:Inter,system-ui}
-body{margin:0;background:var(--bg);color:var(--text);padding:18px}
-.card{background:var(--card);padding:14px;border-radius:10px;margin-bottom:14px}
-.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-button{border:0;border-radius:8px;padding:8px 12px;cursor:pointer}
-table{width:100%;border-collapse:collapse}
-td,th{padding:6px}
-input,select{width:100%;background:transparent;border:1px solid #444;color:inherit}
+:root{--bg:#071020;--card:#0b1622;--text:#e6eef6;--muted:#9aa4b2;--accent:#60a5fa;--pass:#14382a;--fail:#7f1d1d;--border:#1e293b}
+.light{--bg:#f5f7fb;--card:#ffffff;--text:#111827;--muted:#4b5563;--accent:#2563eb;--pass:#d1fae5;--fail:#fee2e2;--border:#e2e8f0}
+*{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial}
+body{margin:0;background:var(--bg);color:var(--text);padding:16px}
+.wrap{max-width:1000px;margin:0 auto}
+.card{background:var(--card);padding:16px;border-radius:10px;margin-bottom:16px;border:1px solid var(--border)}
+.card-title{font-size:15px;font-weight:700;margin-bottom:12px;color:var(--accent)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+button{border:0;border-radius:8px;padding:9px 14px;cursor:pointer;font-weight:600;font-size:13px;transition:all 0.2s}
+.btn-primary{background:linear-gradient(90deg,var(--accent),#2563eb);color:#021226}
+.btn-primary:hover{opacity:0.9;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-small{padding:6px 10px;font-size:12px}
+.btn-danger{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+
+.table-wrapper{overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th,td{padding:10px 8px;text-align:left;font-size:13px;border-bottom:1px solid var(--border)}
+th{background:rgba(96,165,250,.05);font-weight:700;color:var(--accent)}
+td{word-wrap:break-word}
+
+.input-cell input{background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:7px 8px;color:inherit;width:100%;font-size:13px;transition:border-color 0.2s}
+.input-cell input:focus{outline:none;border-color:var(--accent)}
+.input-cell input:invalid{border-color:#ef4444}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.stat-box{background:rgba(96,165,250,.05);padding:10px 12px;border-radius:8px;border:1px solid rgba(96,165,250,.1)}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.stat-value{font-size:18px;font-weight:700;color:var(--accent);margin-top:4px}
+
+.locked-banner{background:rgba(59,130,246,.1);border-left:3px solid #3b82f6;padding:10px 12px;border-radius:4px;margin-bottom:12px;font-size:13px;color:var(--text)}
+
 .pass{background:var(--pass)}
 .fail{background:var(--fail)}
+
+.hint{font-size:11px;color:var(--muted);margin-top:4px}
+
+@media(max-width:768px){
+.controls{flex-direction:column}
+button{width:100%}
+.table-wrapper{border-radius:6px;margin:-16px -16px 0}
+th,td{padding:8px 6px;font-size:12px}
+.stat-box{padding:8px 10px}
+.stat-value{font-size:16px}
+}
 </style>
 </head>
 
 <body>
+<div class="wrap">
 
 <div class="card">
-<div class="controls">
-<button onclick="addRow()">+ Add Course</button>
-<button onclick="clearSem()">Clear Semester</button>
-<button onclick="toggleTheme()">Theme</button>
+<div class="card-title">Current Semester</div>
+
+<div id="lockedBanner" class="locked-banner" style="display:none">
+📌 Semester locked. Clear to add more courses.
 </div>
 
+<div class="controls">
+<button id="addCourseBtn" class="btn-primary">+ Regular Course</button>
+<button id="addWorkshopBtn" class="btn-primary">+ Workshop</button>
+<button id="addSuppBtn" class="btn-primary">+ Supplementary</button>
+<button id="addChallengeBtn" class="btn-primary">+ Challenge</button>
+<button id="clearSemesterBtn" class="btn-ghost">Clear Semester</button>
+<button id="toggleTheme" class="btn-ghost">🌙 Theme</button>
+</div>
+
+<div class="table-wrapper">
 <table>
 <thead>
 <tr>
-<th>Course</th><th>Type</th><th>Credits</th>
-<th>CIA</th><th>ESE</th><th>%</th><th>Grade</th><th>GPA</th><th></th>
+<th>Course</th><th>Type</th><th>Credits</th><th>CIA</th><th>ESE</th><th>Total</th><th>Grade</th><th>GPA</th><th></th>
 </tr>
 </thead>
-<tbody id="body"></tbody>
+<tbody id="courseBody"></tbody>
 </table>
+</div>
 
-Credits: <span id="cr">0</span> |
-SGPA: <span id="sg">0</span>
-<button onclick="addSem()">Add Sem</button>
+<div class="hint">💡 Challenge courses: Only ESE grade counts. All others: CIA (40%) + ESE total.</div>
+
+<div class="stats">
+<div class="stat-box">
+<div class="stat-label">Total Credits</div>
+<div class="stat-value" id="totalCredits">0</div>
+</div>
+<div class="stat-box">
+<div class="stat-label">SGPA</div>
+<div class="stat-value" id="sgpa">0.00</div>
+</div>
+<div class="stat-box">
+<button id="addSemToCgpa" class="btn-primary" style="width:100%;margin-top:12px">Lock & Add to CGPA</button>
+</div>
+</div>
 </div>
 
 <div class="card">
+<div class="card-title">CGPA History</div>
+
+<div class="table-wrapper">
 <table>
-<thead><tr><th>Sem</th><th>SGPA</th><th>Credits</th></tr></thead>
-<tbody id="cg"></tbody>
+<thead><tr><th>Semester</th><th>SGPA</th><th>Credits</th><th></th></tr></thead>
+<tbody id="cgpaBody"></tbody>
 </table>
-CGPA: <span id="cgpa">0</span>
+</div>
+
+<div class="stats">
+<div class="stat-box">
+<div class="stat-label">Overall CGPA</div>
+<div class="stat-value" id="cgpa">0.00</div>
+</div>
+<button id="resetAll" class="btn-ghost btn-small" style="justify-self:start">Reset All Data</button>
+</div>
+</div>
+
 </div>
 
 <script>
+const courseBody=document.getElementById('courseBody');
+const totalCreditsEl=document.getElementById('totalCredits');
+const sgpaEl=document.getElementById('sgpa');
+const cgpaBody=document.getElementById('cgpaBody');
+const cgpaEl=document.getElementById('cgpa');
+const lockedBanner=document.getElementById('lockedBanner');
 
-let sems=[],locked=false;
+let cgpaSems=[],locked=false;
 
-function grade(p){
+// Load data from localStorage
+function loadData(){
+const saved=localStorage.getItem('ktuCalcData');
+if(saved){
+try{
+const data=JSON.parse(saved);
+cgpaSems=data.cgpaSems||[];
+locked=data.locked||false;
+renderCgpa();
+updateLockedBanner();
+}catch(e){console.error('Load error:',e);}
+}
+}
+
+// Save data to localStorage
+function saveData(){
+localStorage.setItem('ktuCalcData',JSON.stringify({cgpaSems,locked}));
+}
+
+function gradeFromPercent(p){
 if(p>=90)return['S',10];
 if(p>=85)return['A+',9];
 if(p>=80)return['A',8.5];
@@ -70,108 +167,164 @@ if(p>=50)return['P',5.5];
 return['F',0];
 }
 
-function addRow(){
-if(locked)return alert("Locked");
+function updateLockedBanner(){
+lockedBanner.style.display=locked?'block':'none';
+}
 
-let tr=document.createElement('tr');
+function createRow(type="Regular"){
+if(locked){
+alert("Semester locked. Clear to add more courses.");
+return;
+}
+
+const tr=document.createElement('tr');
+tr.dataset.type=type;
 
 tr.innerHTML=`
-<td><input></td>
-<td>
-<select>
-<option>Regular</option>
-<option>Workshop</option>
-<option>Supplementary</option>
-<option>Challenge</option>
-</select>
-</td>
-<td><input type="number" value="3"></td>
-<td><input type="number"></td>
-<td><input type="number"></td>
+<td class="input-cell"><input placeholder="Eng-102" required></td>
+<td>${type}</td>
+<td class="input-cell"><input type="number" value="3" min="1" max="5" required></td>
+<td class="input-cell"><input type="number" placeholder="0-40" min="0" max="40" step="0.5"></td>
+<td class="input-cell"><input type="number" placeholder="0-100" min="0" max="100" step="0.5"></td>
 <td>-</td><td>-</td><td>-</td>
-<td><button>Del</button></td>
+<td><button class="btn-danger btn-small">×</button></td>
 `;
 
-tr.querySelectorAll('input,select').forEach(x=>x.oninput=calc);
+tr.querySelectorAll('input').forEach(i=>i.oninput=calc);
 tr.querySelector('button').onclick=()=>{tr.remove();calc();};
 
-document.getElementById('body').appendChild(tr);
+courseBody.appendChild(tr);
 calc();
 }
 
-function clearSem(){
-document.getElementById('body').innerHTML='';
+addCourseBtn.onclick=()=>createRow("Regular");
+addWorkshopBtn.onclick=()=>createRow("Workshop");
+addSuppBtn.onclick=()=>createRow("Supplementary");
+addChallengeBtn.onclick=()=>createRow("Challenge");
+
+clearSemesterBtn.onclick=()=>{
+if(confirm('Clear all courses in this semester?')){
+courseBody.innerHTML='';
+calc();
+locked=false;
+updateLockedBanner();
+}
+};
+
+resetAll.onclick=()=>{
+if(confirm('Delete ALL semesters and current courses? This cannot be undone.')){
+cgpaSems=[];
+courseBody.innerHTML='';
 locked=false;
 calc();
+renderCgpa();
+updateLockedBanner();
+saveData();
 }
+};
+
+addSemToCgpa.onclick=()=>{
+let sg=parseFloat(sgpaEl.textContent)||0;
+let cr=parseFloat(totalCreditsEl.textContent)||0;
+
+if(cr<=0){alert('Add courses first');return;}
+if(sg===0){alert('Verify grades are entered');return;}
+
+let name=prompt("Semester name (e.g., S1, S2)","S"+(cgpaSems.length+1));
+if(!name)return;
+
+cgpaSems.push({sgpa:sg,credits:cr,name:name});
+locked=true;
+renderCgpa();
+updateLockedBanner();
+saveData();
+};
 
 function calc(){
-let rows=[...document.getElementById('body').children];
 let tc=0,ws=0;
+let errors=false;
 
-rows.forEach(tr=>{
-let type=tr.children[1].firstChild.value;
-let c=+tr.children[2].firstChild.value||0;
-let cia=+tr.children[3].firstChild.value||0;
-let ese=+tr.children[4].firstChild.value||0;
+[...courseBody.children].forEach(tr=>{
+let type=tr.dataset.type;
+let courseName=tr.children[0].firstChild.value;
+let c=Number(tr.children[2].firstChild.value)||0;
+let cia=Number(tr.children[3].firstChild.value);
+let ese=Number(tr.children[4].firstChild.value);
 
-if(cia>40)alert("CIA > 40");
-if(ese>100)alert("ESE too high");
+// Validation
+if(!courseName){
+tr.children[6].textContent='—';
+tr.children[7].textContent='—';
+tr.children[5].textContent='—';
+return;
+}
+
+if(cia<0 || cia>40){
+tr.style.background='rgba(239,68,68,.1)';
+errors=true;
+}else{tr.style.background='';}
 
 let total=cia+ese;
-let g,gp;
+let grade,gp;
 
 if(type==="Challenge"){
+if(ese<36 || ese===0){grade='F';gp=0;}
+else{[grade,gp]=gradeFromPercent(ese);}
 total=ese;
-if(ese<36){g='F';gp=0;}
-else{[g,gp]=grade(ese);}
 }else{
-[g,gp]=grade(total);
+if(cia===0 || ese===0){grade='—';gp='—';total='—';}
+else{[grade,gp]=gradeFromPercent(total);}
 }
 
-tr.children[5].textContent=total;
-tr.children[6].textContent=g;
-tr.children[7].textContent=gp;
+tr.children[5].textContent=typeof total==='number'?total.toFixed(1):total;
+tr.children[6].textContent=grade;
+tr.children[7].textContent=typeof gp==='number'?gp:gp;
 
+if(typeof gp==='number'){
 tc+=c;
 ws+=c*gp;
+}
 });
 
-document.getElementById('cr').textContent=tc;
-document.getElementById('sg').textContent=tc?(ws/tc).toFixed(2):0;
+totalCreditsEl.textContent=tc;
+sgpaEl.textContent=tc?(ws/tc).toFixed(2):'0.00';
 }
 
-function addSem(){
-let sg=+document.getElementById('sg').textContent;
-let cr=+document.getElementById('cr').textContent;
-if(!cr)return;
-
-let name=prompt("Name","S"+(sems.length+1));
-sems.push({sg,cr,name});
-locked=true;
-render();
-}
-
-function render(){
+function renderCgpa(){
+cgpaBody.innerHTML='';
 let sum=0,cr=0;
-let body=document.getElementById('cg');
-body.innerHTML='';
 
-sems.forEach((s,i)=>{
-let tr=document.createElement('tr');
-tr.innerHTML=`<td>${s.name}</td><td>${s.sg}</td><td>${s.cr}</td>`;
-body.appendChild(tr);
-sum+=s.sg*s.cr;
-cr+=s.cr;
+cgpaSems.forEach((s,i)=>{
+const tr=document.createElement('tr');
+tr.innerHTML=`
+<td>${s.name}</td>
+<td style="font-weight:700;color:var(--accent)">${s.sgpa}</td>
+<td>${s.credits}</td>
+<td><button class="btn-danger btn-small">×</button></td>
+`;
+tr.querySelector('button').onclick=()=>{
+if(confirm('Delete this semester?')){
+cgpaSems.splice(i,1);
+if(cgpaSems.length===0)locked=false;
+updateLockedBanner();
+renderCgpa();
+saveData();
+}
+};
+cgpaBody.appendChild(tr);
+sum+=s.sgpa*s.credits;
+cr+=s.credits;
 });
 
-document.getElementById('cgpa').textContent=cr?(sum/cr).toFixed(2):0;
+cgpaEl.textContent=cr?(sum/cr).toFixed(2):'0.00';
+saveData();
 }
 
-function toggleTheme(){
-document.body.classList.toggle('light');
-}
+// Theme toggle
+toggleTheme.onclick=()=>document.body.classList.toggle('light');
 
+// Load on startup
+loadData();
 </script>
 </body>
 </html>
