@@ -5,38 +5,32 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>KTU 2024 Scheme SGPA & CGPA Calculator</title>
 <style>
-  :root{--bg:#071020;--card:#0b1622;--muted:#9aa4b2;--accent:#60a5fa;--pass:#14382a;--fail:#7f1d1d}
-  body.light{--bg:#f4f6f8;--card:#ffffff;--muted:#555;--accent:#2563eb;color:#111}
-  *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial}
-  body{margin:0;background:var(--bg);color:#e6eef6;padding:18px}
-  .wrap{max-width:980px;margin:18px auto}
-  h1{margin:0 0 6px;font-size:20px}
-  p.lead{margin:0 0 12px;color:var(--muted);font-size:13px}
-  .card{background:var(--card);padding:14px;border-radius:10px;margin-bottom:14px}
-  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-  button{border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:600}
-  .btn-primary{background:linear-gradient(90deg,var(--accent),#2563eb);color:#021226}
-  .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.08);color:var(--muted)}
-  table{width:100%;border-collapse:collapse;margin-top:6px}
-  th,td{padding:8px;text-align:left;font-size:13px;color:#e6eef6}
-  th{color:var(--muted)}
-  input{background:transparent;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:6px;color:inherit;width:100%}
-  .summary{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
-  .stat{background:#071422;padding:10px;border-radius:8px;min-width:160px}
-  .big{font-weight:700;font-size:18px}
+:root{--bg:#071020;--card:#0b1622;--muted:#9aa4b2;--accent:#60a5fa}
+body.light{--bg:#f4f6f8;--card:#ffffff;--muted:#555;--accent:#2563eb;color:#111}
+*{box-sizing:border-box;font-family:Inter,system-ui}
+body{margin:0;background:var(--bg);color:#e6eef6;padding:18px}
+.wrap{max-width:980px;margin:auto}
+.card{background:var(--card);padding:14px;border-radius:10px;margin-bottom:14px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+button{padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+.btn-primary{background:var(--accent)}
+.btn-ghost{background:transparent;border:1px solid #444;color:#aaa}
+table{width:100%}
+td,th{padding:6px}
+input{width:100%}
+.stat{margin-top:10px}
 </style>
 </head>
 <body>
+
 <div class="wrap">
-<h1>KTU 2024 Scheme SGPA & CGPA Calculator</h1>
-<p class="lead">Usage: add semesters, add custom courses & workshops, enter CIA (out of 40) and ESE (out of 60 / 50 for workshops). Clear each sem after adding sem to proceed with the next sem.</p>
 
 <div class="card">
 <div class="controls">
-<button class="btn-primary" onclick="createRow(false)">+ Add Course</button>
-<button class="btn-primary" onclick="createRow(true)">+ Add Workshop</button>
-<button class="btn-ghost" onclick="clearSem()">Clear Semester</button>
-<button class="btn-ghost" onclick="toggleTheme()">Toggle Theme</button>
+<button onclick="createRow(false)">+ Add Course</button>
+<button onclick="createRow(true)">+ Add Workshop</button>
+<button onclick="clearSem()">Clear Semester</button>
+<button onclick="toggleTheme()">Theme</button>
 </div>
 
 <table>
@@ -48,69 +42,47 @@
 <tbody id="courseBody"></tbody>
 </table>
 
-<div class="summary">
-<div class="stat"><div>Total Credits</div><div class="big" id="tc">0</div></div>
-<div class="stat"><div>SGPA</div><div class="big" id="sg">0</div></div>
-<div class="stat"><div>Backlogs</div><div class="big" id="bl">0</div></div>
-</div>
+<div class="stat">Credits: <span id="tc">0</span></div>
+<div class="stat">SGPA: <span id="sg">0</span></div>
+<div class="stat">Backlogs: <span id="bl">0</span></div>
 
-<div class="controls">
-<input placeholder="Target Grade (e.g A)" id="targetGrade">
-<button class="btn-primary" onclick="predict()">Predict Required ESE</button>
-<div id="predictOut"></div>
-</div>
-
-<div class="controls">
-<input placeholder="Target CGPA" id="targetCgpa">
-<input placeholder="Remaining Semesters" id="remSem">
-<button class="btn-primary" onclick="cgpaPlan()">Plan CGPA</button>
+<input id="targetCgpa" placeholder="Target CGPA">
+<input id="remSem" placeholder="Remaining Sem">
+<button onclick="cgpaPlan()">Plan</button>
 <div id="cgpaPlanOut"></div>
-</div>
 
-<div id="gradeDist"></div>
-<div id="contrib"></div>
-
-<button class="btn-primary" onclick="addSem()">+ Add Sem to CGPA</button>
-<button class="btn-ghost" onclick="lockSem()">Lock</button>
-<button class="btn-ghost" onclick="unlockSem()">Unlock</button>
+<button onclick="addSem()">Add Sem</button>
 </div>
 
 <div class="card">
-<div class="controls">
-<button class="btn-ghost" onclick="exportData()">Export</button>
-<button class="btn-ghost" onclick="importData()">Import</button>
-<button class="btn-ghost" onclick="downloadPDF()">Export PDF</button>
-<input type="file" id="file" hidden>
-</div>
-
 <table>
 <thead><tr><th>Sem</th><th>SGPA</th><th>Credits</th><th></th></tr></thead>
 <tbody id="cgpaBody"></tbody>
 </table>
-
-<div class="stat"><div>CGPA</div><div class="big" id="cg">0</div></div>
+<div>CGPA: <span id="cg">0</span></div>
 </div>
+
 </div>
 
 <script>
-let cg=[],locked=false;
+let cg=[];
+
+const tcEl=document.getElementById("tc");
+const sgEl=document.getElementById("sg");
+const blEl=document.getElementById("bl");
+const cgEl=document.getElementById("cg");
 
 function grade(p){
 if(p>=90)return['S',10];
-if(p>=85)return['A+',9];
-if(p>=80)return['A',8.5];
-if(p>=75)return['B+',8];
-if(p>=70)return['B',7.5];
-if(p>=65)return['C+',7];
-if(p>=60)return['C',6.5];
-if(p>=55)return['D',6];
-if(p>=50)return['P',5.5];
+if(p>=80)return['A',8];
+if(p>=70)return['B',7];
+if(p>=60)return['C',6];
+if(p>=50)return['P',5];
 return['F',0];
 }
 
 function createRow(w){
-if(locked)return alert("Semester locked");
-let tr=document.createElement('tr');
+let tr=document.createElement("tr");
 tr.innerHTML=`
 <td><input></td>
 <td>${w?'W':'R'}</td>
@@ -118,16 +90,19 @@ tr.innerHTML=`
 <td><input type=number></td>
 <td><input type=number></td>
 <td>-</td><td>-</td><td>-</td>
-<td><button onclick="this.parentNode.parentNode.remove();calc()">X</button></td>`;
+<td><button onclick="this.closest('tr').remove();calc()">X</button></td>`;
 tr.dataset.w=w?1:0;
-tr.querySelectorAll('input').forEach(i=>i.oninput=calc);
+
+tr.querySelectorAll("input").forEach(i=>i.oninput=calc);
+
 courseBody.appendChild(tr);
 calc();
+return tr;
 }
 
 function calc(){
 let rows=[...courseBody.children];
-let tc=0,sum=0,bl=0,dist={},contr=[];
+let tc=0,sum=0,bl=0;
 
 rows.forEach(r=>{
 let w=r.dataset.w==1;
@@ -135,24 +110,20 @@ let c=+r.children[2].firstChild.value||0;
 let cia=+r.children[3].firstChild.value||0;
 let ese=+r.children[4].firstChild.value||0;
 
-if(cia>40){alert("CIA > 40");r.children[3].firstChild.value=40;cia=40;}
+if(cia>40){alert("CIA > 40");cia=40;r.children[3].firstChild.value=40;}
 let max=w?50:60;
-if(ese>max){alert("ESE exceeds max");r.children[4].firstChild.value=max;ese=max;}
+if(ese>max){alert("ESE > max");ese=max;r.children[4].firstChild.value=max;}
 
 let p=cia+ese;
-let eseMin=0.4*max;
 let g,gp;
 
-if(ese<eseMin){g='F';gp=0;bl++}
+if(ese<0.4*max){g='F';gp=0;bl++}
 else if(p<50){g='FE';gp=0;bl++}
 else [g,gp]=grade(p);
 
 r.children[5].innerText=p;
 r.children[6].innerText=g;
 r.children[7].innerText=gp;
-
-dist[g]=(dist[g]||0)+1;
-contr.push({name:r.children[0].firstChild.value||"?",val:c*gp});
 
 tc+=c;
 sum+=c*gp;
@@ -161,47 +132,33 @@ sum+=c*gp;
 tcEl.innerText=tc;
 sgEl.innerText=tc?(sum/tc).toFixed(2):0;
 blEl.innerText=bl;
-
-gradeDist.innerText=Object.entries(dist).map(([k,v])=>k+":"+v).join(" ");
-contr.sort((a,b)=>a.val-b.val);
-contrib.innerText=contr.map(x=>x.name+":"+x.val).join(" | ");
-
-save();
 }
 
 function addSem(){
-let sg=+document.getElementById("sg").innerText;
-let cr=+document.getElementById("tc").innerText;
-if(cr<=0)return alert("No credits.");
-let name=prompt("Enter semester name:");
+let sg=parseFloat(sgEl.innerText)||0;
+let cr=parseFloat(tcEl.innerText)||0;
+if(cr<=0)return alert("No credits");
+
+let name=prompt("Sem name:");
 cg.push({sg,cr,name});
 render();
-save();
 }
 
 function render(){
 cgpaBody.innerHTML="";
-let s=0,c=0;
-cg.forEach((x,i)=>{
-let tr=document.createElement('tr');
-tr.innerHTML=`<td>${x.name}</td><td>${x.sg}</td><td>${x.cr}</td><td><button onclick="cg.splice(${i},1);render()">X</button></td>`;
+let sum=0,cr=0;
+
+cg.forEach((s,i)=>{
+let tr=document.createElement("tr");
+tr.innerHTML=`<td>${s.name}</td><td>${s.sg}</td><td>${s.cr}</td>
+<td><button onclick="cg.splice(${i},1);render()">X</button></td>`;
 cgpaBody.appendChild(tr);
-s+=x.sg*x.cr;c+=x.cr;
+
+sum+=s.sg*s.cr;
+cr+=s.cr;
 });
-cgEl.innerText=c?(s/c).toFixed(2):0;
-}
 
-function clearSem(){if(locked)return;courseBody.innerHTML="";calc();}
-
-function predict(){
-let target=document.getElementById('targetGrade').value;
-let map={S:90,'A+':85,A:80,'B+':75,B:70,'C+':65,C:60,D:55,P:50};
-let needed=map[target];
-if(!needed)return;
-let r=courseBody.children[0];
-if(!r)return;
-let cia=+r.children[3].firstChild.value||0;
-predictOut.innerText="Need ESE: "+(needed-cia);
+cgEl.innerText=cr?(sum/cr).toFixed(2):0;
 }
 
 function cgpaPlan(){
@@ -209,66 +166,14 @@ let t=+targetCgpa.value;
 let rem=+remSem.value;
 let curr=+cgEl.innerText||0;
 if(!t||!rem)return;
+
 let req=((t*(cg.length+rem))-(curr*cg.length))/rem;
-cgpaPlanOut.innerText="Required avg SGPA: "+req.toFixed(2);
+cgpaPlanOut.innerText=req.toFixed(2);
 }
 
-function toggleTheme(){document.body.classList.toggle('light');}
-function lockSem(){locked=true;}
-function unlockSem(){locked=false;}
-
-function save(){
-localStorage.setItem("ktu",JSON.stringify({
-rows:[...courseBody.children].map(r=>[
-r.children[0].firstChild.value,
-r.dataset.w,
-r.children[2].firstChild.value,
-r.children[3].firstChild.value,
-r.children[4].firstChild.value
-]),
-cg,locked
-}));
-}
-
-function load(){
-let d=JSON.parse(localStorage.getItem("ktu"));
-if(!d)return;
-courseBody.innerHTML="";
-d.rows.forEach(r=>{
-let tr=createRow(r[1]==1);
-let last=courseBody.lastChild;
-last.children[0].firstChild.value=r[0];
-last.children[2].firstChild.value=r[2];
-last.children[3].firstChild.value=r[3];
-last.children[4].firstChild.value=r[4];
-});
-cg=d.cg||[];
-locked=d.locked||false;
-render();
-calc();
-}
-
-function exportData(){
-let d=localStorage.getItem("ktu");
-let a=document.createElement('a');
-a.href=URL.createObjectURL(new Blob([d]));
-a.download="backup.json";
-a.click();
-}
-
-function importData(){
-file.click();
-file.onchange=e=>{
-let f=e.target.files[0];
-let r=new FileReader();
-r.onload=()=>{localStorage.setItem("ktu",r.result);load();}
-r.readAsText(f);
-};
-}
-
-function downloadPDF(){window.print();}
-
-load();
+function clearSem(){courseBody.innerHTML="";calc();}
+function toggleTheme(){document.body.classList.toggle("light");}
 </script>
+
 </body>
 </html>
