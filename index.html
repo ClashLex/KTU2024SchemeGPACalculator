@@ -32,7 +32,6 @@ margin:0;
 background:var(--bg);
 color:var(--text);
 padding:18px;
-transition:0.2s;
 }
 
 .wrap{max-width:980px;margin:18px auto}
@@ -78,6 +77,8 @@ border:1px solid rgba(0,0,0,.15);
 .pass{background:var(--pass)}
 .fail{background:var(--fail)}
 
+.small{font-size:12px;color:var(--muted);margin-top:6px}
+
 </style>
 </head>
 
@@ -85,12 +86,17 @@ border:1px solid rgba(0,0,0,.15);
 <div class="wrap">
 
 <div class="card">
+
 <div class="controls">
 <button id="addCourseBtn">+ Add Course</button>
 <button id="addWorkshopBtn">+ Add Workshop</button>
 <button id="clearSemesterBtn">Clear Semester</button>
 <button id="toggleTheme">Theme</button>
 <button id="exportPDF">PDF</button>
+</div>
+
+<div class="small">
+Add Course: adds a regular subject. Add Workshop: adds workshop subject (50+50 scheme). Clear Semester: removes all subjects. Theme: toggles dark/light. PDF: exports page as printable file.
 </div>
 
 <table>
@@ -109,6 +115,15 @@ Credits: <span id="totalCredits">0</span> |
 SGPA: <span id="sgpa">0.00</span>
 <button id="addSemToCgpa">Add Sem</button>
 </div>
+
+<div class="small">
+Add Sem: stores this semester into CGPA and locks editing. Unlock button re-enables editing.
+</div>
+
+<div class="small">
+Grading: Based on total percentage (CIA + ESE). S=90+(10), A+=85+(9), A=80+(8.5), B+=75+(8), B=70+(7.5), C+=65+(7), C=60+(6.5), D=55+(6), P=50+(5.5), below 50 = F. If ESE &lt; 40% → F. If total &lt; 50 but ESE pass → FE.
+</div>
+
 </div>
 
 <div class="card">
@@ -117,6 +132,11 @@ SGPA: <span id="sgpa">0.00</span>
 <tbody id="cgpaBody"></tbody>
 </table>
 CGPA: <span id="cgpa">0.00</span>
+
+<div class="small">
+Goal: required SGPA for target CGPA. Impact: shows subjects lowering SGPA. Reval: simulate by editing marks. Backlog: shows failed subjects. Dist: grade distribution. Predict: trial marks. Unlock: edit locked semester.
+</div>
+
 </div>
 
 </div>
@@ -240,7 +260,7 @@ cr+=s.credits;
 cgpaEl.textContent=cr?(sum/cr).toFixed(2):'0.00';
 }
 
-/* FEATURES */
+/* features */
 
 document.getElementById('toggleTheme').onclick=()=>{
 document.body.classList.toggle('light');
@@ -292,7 +312,6 @@ b.textContent=t;
 b.onclick=f;
 ctrl.appendChild(b);
 });
-
 </script>
 </body>
 </html>
