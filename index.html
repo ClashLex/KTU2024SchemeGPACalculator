@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>KTU 2024 Scheme SGPA & CGPA Calculator</title>
 <style>
-  :root{--bg:#071020;--card:#0b1622;--muted:#9aa4b2;--accent:#60a5fa}
+  :root{--bg:#071020;--card:#0b1622;--muted:#9aa4b2;--accent:#60a5fa;--pass:#14382a;--fail:#7f1d1d}
   body.light{--bg:#f4f6f8;--card:#ffffff;--muted:#555;--accent:#2563eb;color:#111}
   *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial}
   body{margin:0;background:var(--bg);color:#e6eef6;padding:18px}
@@ -18,7 +18,7 @@
   .btn-primary{background:linear-gradient(90deg,var(--accent),#2563eb);color:#021226}
   .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.08);color:var(--muted)}
   table{width:100%;border-collapse:collapse;margin-top:6px}
-  th,td{padding:8px;text-align:left;font-size:13px}
+  th,td{padding:8px;text-align:left;font-size:13px;color:#e6eef6}
   th{color:var(--muted)}
   input{background:transparent;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:6px;color:inherit;width:100%}
   .summary{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
@@ -162,10 +162,7 @@ tcEl.innerText=tc;
 sgEl.innerText=tc?(sum/tc).toFixed(2):0;
 blEl.innerText=bl;
 
-let dText="";
-for(let k in dist)dText+=k+":"+dist[k]+" ";
-gradeDist.innerText=dText;
-
+gradeDist.innerText=Object.entries(dist).map(([k,v])=>k+":"+v).join(" ");
 contr.sort((a,b)=>a.val-b.val);
 contrib.innerText=contr.map(x=>x.name+":"+x.val).join(" | ");
 
@@ -173,8 +170,9 @@ save();
 }
 
 function addSem(){
-let sg=+sgEl.innerText;
-let cr=+tcEl.innerText;
+let sg=+document.getElementById("sg").innerText;
+let cr=+document.getElementById("tc").innerText;
+if(cr<=0)return alert("No credits.");
 let name=prompt("Enter semester name:");
 cg.push({sg,cr,name});
 render();
@@ -200,27 +198,22 @@ let target=document.getElementById('targetGrade').value;
 let map={S:90,'A+':85,A:80,'B+':75,B:70,'C+':65,C:60,D:55,P:50};
 let needed=map[target];
 if(!needed)return;
-
 let r=courseBody.children[0];
 if(!r)return;
-
 let cia=+r.children[3].firstChild.value||0;
-let eseReq=needed-cia;
-predictOut.innerText="Need ESE: "+eseReq;
+predictOut.innerText="Need ESE: "+(needed-cia);
 }
 
 function cgpaPlan(){
 let t=+targetCgpa.value;
 let rem=+remSem.value;
 let curr=+cgEl.innerText||0;
-
 if(!t||!rem)return;
 let req=((t*(cg.length+rem))-(curr*cg.length))/rem;
 cgpaPlanOut.innerText="Required avg SGPA: "+req.toFixed(2);
 }
 
 function toggleTheme(){document.body.classList.toggle('light');}
-
 function lockSem(){locked=true;}
 function unlockSem(){locked=false;}
 
@@ -242,12 +235,12 @@ let d=JSON.parse(localStorage.getItem("ktu"));
 if(!d)return;
 courseBody.innerHTML="";
 d.rows.forEach(r=>{
-createRow(r[1]==1);
-let tr=courseBody.lastChild;
-tr.children[0].firstChild.value=r[0];
-tr.children[2].firstChild.value=r[2];
-tr.children[3].firstChild.value=r[3];
-tr.children[4].firstChild.value=r[4];
+let tr=createRow(r[1]==1);
+let last=courseBody.lastChild;
+last.children[0].firstChild.value=r[0];
+last.children[2].firstChild.value=r[2];
+last.children[3].firstChild.value=r[3];
+last.children[4].firstChild.value=r[4];
 });
 cg=d.cg||[];
 locked=d.locked||false;
