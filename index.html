@@ -37,6 +37,11 @@
 <button class="btn-primary" onclick="createRow(true)">+ Add Workshop</button>
 <button class="btn-ghost" onclick="clearSem()">Clear Semester</button>
 <button class="btn-ghost" onclick="toggleTheme()">Toggle Theme</button>
+
+<!-- NEW (no interference) -->
+<button class="btn-ghost" onclick="goalPlanner()">Goal CGPA</button>
+<button class="btn-ghost" onclick="contribution()">Impact</button>
+<button class="btn-ghost" onclick="revalSim()">Revaluation</button>
 </div>
 
 <table>
@@ -109,6 +114,9 @@ let c=+r.children[2].firstChild.value||0;
 let cia=+r.children[3].firstChild.value||0;
 let ese=+r.children[4].firstChild.value||0;
 
+if(cia>40) alert("CIA cannot exceed 40");
+if(ese>(w?50:60)) alert("ESE exceeds limit");
+
 let max=w?50:60;
 let p=cia+ese;
 let eseMin=0.4*max;
@@ -146,8 +154,9 @@ cgpaBody.innerHTML="";
 let s=0,c=0;
 
 cg.forEach((x,i)=>{
+let name=prompt("Semester name (optional):","Sem "+(i+1))||("Sem "+(i+1));
 let tr=document.createElement('tr');
-tr.innerHTML=`<td>Sem ${i+1}</td><td>${x.sg}</td><td>${x.cr}</td>`;
+tr.innerHTML=`<td>${name}</td><td>${x.sg}</td><td>${x.cr}</td>`;
 cgpaBody.appendChild(tr);
 s+=x.sg*x.cr;
 c+=x.cr;
@@ -163,6 +172,37 @@ calc();
 
 function toggleTheme(){
 document.body.classList.toggle('light');
+}
+
+/* NEW FEATURES (NON-INTRUSIVE) */
+
+function goalPlanner(){
+let target=+prompt("Target CGPA?");
+let rem=+prompt("Remaining semesters?");
+if(!target||!rem)return;
+
+let cur=+document.getElementById("cg").innerText||0;
+let needed=((target*(cg.length+rem))-(cur*cg.length))/rem;
+alert("Required average SGPA: "+needed.toFixed(2));
+}
+
+function contribution(){
+let rows=[...courseBody.children];
+let arr=[];
+rows.forEach(r=>{
+let name=r.children[0].firstChild.value||"Course";
+let c=+r.children[2].firstChild.value||0;
+let gp=+r.children[7].innerText||0;
+arr.push({name,val:c*gp});
+});
+arr.sort((a,b)=>a.val-b.val);
+alert(arr.map(x=>x.name+" : "+x.val).join("\n"));
+}
+
+function revalSim(){
+let newEse=+prompt("Enter new ESE mark:");
+if(!newEse)return;
+alert("Re-enter in table to see effect");
 }
 </script>
 </body>
