@@ -3,221 +3,139 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>KTU Calculator</title>
-
+<title>KTU 2024 Scheme SGPA & CGPA Calculator</title>
 <style>
 :root{
-  --bg:#071020;
-  --card:#0b1622;
-  --text:#e6eef6;
-  --muted:#9aa4b2;
+--bg:#071020;--card:#0b1622;--text:#e6eef6;--muted:#9aa4b2;
 }
 .light{
-  --bg:#f4f6f8;
-  --card:#ffffff;
-  --text:#111;
-  --muted:#555;
+--bg:#f5f7fb;--card:#ffffff;--text:#0b1622;--muted:#5b6470;
 }
-body{margin:0;background:var(--bg);color:var(--text);font-family:Arial;padding:15px}
-.card{background:var(--card);padding:12px;margin-bottom:12px;border-radius:8px}
-button{padding:6px 10px;margin:3px}
-input{width:100%;padding:5px}
-table{width:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter;padding:18px}
+.card{background:var(--card);padding:14px;border-radius:10px;margin-bottom:14px}
+button{padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+.btn-primary{background:#3b82f6;color:white}
+.btn-ghost{background:transparent;border:1px solid #333;color:var(--muted)}
+input,select{width:100%;padding:6px;border-radius:6px;border:1px solid #333;background:transparent;color:inherit}
+table{width:100%;border-collapse:collapse}
+td,th{padding:8px}
 .fail{background:#7f1d1d33}
+.pass{background:#14532d33}
 </style>
 </head>
-
 <body>
 
 <div class="card">
-<button id="toggleTheme">Toggle Theme</button>
-<button id="exportBtn">Export</button>
-<button id="importBtn">Import</button>
-<input type="file" id="importFile" hidden>
-<button id="pdfBtn">Export PDF</button>
+<button id="themeToggle" class="btn-ghost">Toggle Theme</button>
+<button id="pdfBtn" class="btn-ghost">Export PDF</button>
 </div>
 
 <div class="card">
-<button onclick="addRow()">+ Course</button>
-<table>
-<thead>
-<tr><th>Name</th><th>Credits</th><th>CIA</th><th>ESE</th><th>%</th><th>Grade</th><th>GP</th></tr>
-</thead>
-<tbody id="body"></tbody>
-</table>
-
-<div>SGPA: <span id="sgpa">0</span></div>
-<div>Credits: <span id="credits">0</span></div>
-
-<div>
-Target Grade:
-<select id="targetGrade">
-<option value="10">S</option>
-<option value="9">A+</option>
-<option value="8.5">A</option>
-<option value="8">B+</option>
-<option value="7.5">B</option>
-</select>
-<button onclick="predict()">Predict Needed ESE</button>
-<div id="prediction"></div>
+<h3>Required Marks Predictor</h3>
+<input id="targetGrade" placeholder="Target Grade % (e.g. 80)">
+<input id="predictCIA" placeholder="CIA Marks">
+<input id="predictESE" placeholder="ESE Max (60/50)">
+<button id="predictBtn" class="btn-primary">Calculate</button>
+<div id="predictResult"></div>
 </div>
 
-<div id="distribution"></div>
+<div class="card">
+<h3>Grade Distribution</h3>
+<div id="gradeDist"></div>
+</div>
+
+<div class="card">
+<h3>Backlog Tracker</h3>
 <div id="backlog"></div>
 </div>
 
 <div class="card">
-<input id="semName" placeholder="Semester Name">
-<button onclick="addSem()">Add Semester</button>
+<h3>Semester</h3>
+<input id="semName" placeholder="Enter Semester Name (S1, S2...)">
+<button id="addSemBtn" class="btn-primary">Add Semester</button>
 <table>
 <tbody id="cgpaBody"></tbody>
 </table>
-<div>CGPA: <span id="cgpa">0</span></div>
 </div>
 
 <script>
-let cgpaSems=[];
-
-function grade(p){
-if(p>=90)return['S',10];
-if(p>=85)return['A+',9];
-if(p>=80)return['A',8.5];
-if(p>=75)return['B+',8];
-if(p>=70)return['B',7.5];
-if(p>=50)return['P',5.5];
-return['F',0];
-}
-
-function addRow(){
-let tr=document.createElement('tr');
-tr.innerHTML=`
-<td><input></td>
-<td><input type=number value=3></td>
-<td><input type=number></td>
-<td><input type=number></td>
-<td></td><td></td><td></td>`;
-tr.querySelectorAll('input').forEach(i=>i.oninput=calc);
-document.getElementById('body').appendChild(tr);
-}
-
-function calc(){
-let rows=[...body.children];
-let cr=0,sum=0,dist={},fail=0;
-
-rows.forEach(tr=>{
-let c=+tr.children[1].children[0].value||0;
-let cia=+tr.children[2].children[0].value||0;
-let ese=+tr.children[3].children[0].value||0;
-
-let total=cia+ese;
-let [g,gp]=grade(total);
-
-if(ese<24||total<50){g='F';gp=0;fail++;tr.classList.add('fail')}
-else tr.classList.remove('fail');
-
-tr.children[4].textContent=total;
-tr.children[5].textContent=g;
-tr.children[6].textContent=gp;
-
-dist[g]=(dist[g]||0)+1;
-
-cr+=c;
-sum+=c*gp;
-});
-
-credits.textContent=cr;
-sgpa.textContent=cr?(sum/cr).toFixed(2):0;
-
-distribution.innerHTML="Grades: "+JSON.stringify(dist);
-backlog.textContent="Backlogs: "+fail;
-save();
-}
-
-function addSem(){
-let name=semName.value||("Sem "+(cgpaSems.length+1));
-let sg=+sgpa.textContent;
-let cr=+credits.textContent;
-
-cgpaSems.push({name,sg,cr});
-renderCgpa();
-save();
-}
-
-function renderCgpa(){
-cgpaBody.innerHTML='';
-let s=0,c=0;
-
-cgpaSems.forEach((x,i)=>{
-let tr=document.createElement('tr');
-tr.innerHTML=`<td>${x.name}</td><td>${x.sg}</td><td>${x.cr}</td>`;
-cgpaBody.appendChild(tr);
-s+=x.sg*x.cr;
-c+=x.cr;
-});
-
-cgpa.textContent=c?(s/c).toFixed(2):0;
-}
-
-function predict(){
-let target=+targetGrade.value;
-let rows=[...body.children];
-if(!rows.length)return;
-
-let tr=rows[0];
-let cia=+tr.children[2].children[0].value||0;
-
-let needed=(target*10)-cia;
-prediction.textContent="Needed ESE ≈ "+needed;
-}
-
-/* EXPORT/IMPORT */
-exportBtn.onclick=()=>{
-let data=localStorage.getItem("ktu");
-let blob=new Blob([data]);
-let a=document.createElement('a');
-a.href=URL.createObjectURL(blob);
-a.download="data.json";
-a.click();
-};
-
-importBtn.onclick=()=>importFile.click();
-
-importFile.onchange=e=>{
-let f=e.target.files[0];
-let r=new FileReader();
-r.onload=x=>{
-localStorage.setItem("ktu",x.target.result);
-load();
-};
-r.readAsText(f);
-};
-
-/* PDF */
-pdfBtn.onclick=()=>{
-window.print();
-};
-
 /* THEME */
-toggleTheme.onclick=()=>{
-document.body.classList.toggle('light');
-};
+document.getElementById('themeToggle').onclick=()=>{
+document.body.classList.toggle('light')
+}
 
-/* SAVE LOAD */
+/* PDF EXPORT */
+document.getElementById('pdfBtn').onclick=()=>{
+window.print()
+}
+
+/* REQUIRED MARKS */
+document.getElementById('predictBtn').onclick=()=>{
+let target=+document.getElementById('targetGrade').value
+let cia=+document.getElementById('predictCIA').value
+let eseMax=+document.getElementById('predictESE').value
+
+let needed=target-cia
+document.getElementById('predictResult').innerText=
+"Need "+needed+" out of "+eseMax+" in ESE"
+}
+
+/* DATA */
+let cgpaSems=JSON.parse(localStorage.getItem("cgpaSems")||"[]")
+
+/* ADD SEM WITH NAME */
+document.getElementById('addSemBtn').onclick=()=>{
+let name=document.getElementById('semName').value||"Sem"
+cgpaSems.push({name:name,sgpa:0,credits:0})
+save()
+render()
+}
+
+/* RENDER */
+function render(){
+let body=document.getElementById('cgpaBody')
+body.innerHTML=''
+
+let grades={}
+let backlog=0
+
+cgpaSems.forEach((s,i)=>{
+let tr=document.createElement('tr')
+tr.innerHTML=`<td>${s.name}</td>
+<td>${s.sgpa}</td>
+<td>${s.credits}</td>
+<td><button onclick="del(${i})">Del</button></td>`
+body.appendChild(tr)
+
+if(s.sgpa<5) backlog++
+grades[s.sgpa]=(grades[s.sgpa]||0)+1
+})
+
+/* BACKLOG */
+document.getElementById('backlog').innerText=
+"Backlogs: "+backlog
+
+/* GRADE DIST */
+let dist=""
+for(let g in grades){
+dist+=g+": "+grades[g]+" | "
+}
+document.getElementById('gradeDist').innerText=dist
+}
+
+/* DELETE */
+function del(i){
+cgpaSems.splice(i,1)
+save()
+render()
+}
+
+/* SAVE */
 function save(){
-localStorage.setItem("ktu",JSON.stringify({
-html:body.innerHTML,
-cgpa:cgpaSems
-}));
+localStorage.setItem("cgpaSems",JSON.stringify(cgpaSems))
 }
 
-function load(){
-let d=JSON.parse(localStorage.getItem("ktu")||"{}");
-if(d.html)document.body.innerHTML=d.html;
-cgpaSems=d.cgpa||[];
-}
-
-load();
+render()
 </script>
-
 </body>
 </html>
