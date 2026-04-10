@@ -4,22 +4,80 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>KTU 2024 Scheme SGPA & CGPA Calculator</title>
+
 <style>
-:root{--bg:#071020;--card:#0b1622;--muted:#9aa4b2;--accent:#60a5fa;--pass:#14382a;--fail:#7f1d1d}
-.light{--bg:#f5f7fb;--card:#ffffff;--muted:#4b5563;--accent:#2563eb;--pass:#d1fae5;--fail:#fee2e2;color:#000}
+:root{
+--bg:#071020;
+--card:#0b1622;
+--text:#e6eef6;
+--muted:#9aa4b2;
+--accent:#60a5fa;
+--pass:#14382a;
+--fail:#7f1d1d;
+}
+
+.light{
+--bg:#f5f7fb;
+--card:#ffffff;
+--text:#111827;
+--muted:#4b5563;
+--accent:#2563eb;
+--pass:#d1fae5;
+--fail:#fee2e2;
+}
+
 *{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Arial}
-body{margin:0;background:var(--bg);color:inherit;padding:18px}
+body{
+margin:0;
+background:var(--bg);
+color:var(--text);
+padding:18px;
+transition:0.2s;
+}
+
 .wrap{max-width:980px;margin:18px auto}
 .card{background:var(--card);padding:14px;border-radius:10px;margin-bottom:14px}
 .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-button{border:0;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:600}
+
+button{
+border:0;
+border-radius:8px;
+padding:8px 12px;
+cursor:pointer;
+font-weight:600;
+}
+
 .btn-primary{background:linear-gradient(90deg,var(--accent),#2563eb);color:#021226}
-.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.08);color:var(--muted)}
+.btn-ghost{
+background:transparent;
+border:1px solid rgba(255,255,255,.08);
+color:var(--muted);
+}
+
+.light .btn-ghost{
+border:1px solid rgba(0,0,0,.1);
+}
+
 table{width:100%;border-collapse:collapse;margin-top:6px}
-th,td{padding:8px;text-align:left;font-size:13px}
-input{background:transparent;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:6px;color:inherit;width:100%}
-.pass{background:rgba(20,83,45,.12)}
-.fail{background:rgba(127,29,29,.12)}
+th,td{padding:8px;text-align:left;font-size:13px;color:var(--text)}
+th{color:var(--muted)}
+
+input{
+background:transparent;
+border:1px solid rgba(255,255,255,.1);
+border-radius:6px;
+padding:6px;
+color:var(--text);
+width:100%;
+}
+
+.light input{
+border:1px solid rgba(0,0,0,.15);
+}
+
+.pass{background:var(--pass)}
+.fail{background:var(--fail)}
+
 </style>
 </head>
 
@@ -88,6 +146,7 @@ return['F',0];
 
 function createRow(w=false){
 if(locked)return alert("Semester locked");
+
 const tr=document.createElement('tr');
 tr.dataset.isWorkshop=w?'1':'0';
 
@@ -110,14 +169,20 @@ calc();
 
 document.getElementById('addCourseBtn').onclick=()=>createRow(false);
 document.getElementById('addWorkshopBtn').onclick=()=>createRow(true);
-document.getElementById('clearSemesterBtn').onclick=()=>{courseBody.innerHTML='';calc();locked=false;};
+document.getElementById('clearSemesterBtn').onclick=()=>{
+courseBody.innerHTML='';
+calc();
+locked=false;
+};
 
 document.getElementById('addSemToCgpa').onclick=()=>{
 let sg=parseFloat(sgpaEl.textContent)||0;
 let cr=parseFloat(totalCreditsEl.textContent)||0;
 if(cr<=0)return;
+
 let name=prompt("Semester name","S"+(cgpaSems.length+1));
 cgpaSems.push({sgpa:sg,credits:cr,name:name||("S"+(cgpaSems.length+1))});
+
 locked=true;
 renderCgpa();
 };
@@ -166,6 +231,7 @@ tr.innerHTML=`
 <td><button>Del</button></td>
 `;
 tr.querySelector('button').onclick=()=>{cgpaSems.splice(i,1);renderCgpa();};
+
 cgpaBody.appendChild(tr);
 sum+=s.sgpa*s.credits;
 cr+=s.credits;
@@ -176,7 +242,12 @@ cgpaEl.textContent=cr?(sum/cr).toFixed(2):'0.00';
 
 /* FEATURES */
 
-// Goal planner
+document.getElementById('toggleTheme').onclick=()=>{
+document.body.classList.toggle('light');
+};
+
+document.getElementById('exportPDF').onclick=()=>window.print();
+
 function goal(){
 let t=prompt("Target CGPA");
 let r=prompt("Remaining sems");
@@ -185,7 +256,6 @@ let done=cgpaSems.length;
 alert(((t*(done+r)-(cur*done))/r).toFixed(2));
 }
 
-// Contribution
 function impact(){
 let arr=[...courseBody.children].map(tr=>{
 let n=tr.children[0].firstChild.value||"Course";
@@ -197,38 +267,15 @@ arr.sort((a,b)=>a.v-b.v);
 alert(arr.map(x=>x.n+" "+x.v).join("\n"));
 }
 
-// Revaluation
 function reval(){alert("Edit marks to simulate");}
-
-// Backlog
 function backlog(){
 let f=[...courseBody.children].filter(tr=>tr.children[6].textContent==='F'||tr.children[6].textContent==='FE');
 alert("Backlogs: "+f.length);
 }
-
-// Distribution
-function dist(){
-alert(JSON.stringify(window.gradeDist||{}));
-}
-
-// Required marks predictor
-function predictor(){
-let target=prompt("Target total %");
-alert("Enter marks manually to test");
-}
-
-// Unlock
+function dist(){alert(JSON.stringify(window.gradeDist||{}));}
+function predictor(){alert("Edit marks manually");}
 function unlock(){locked=false;}
 
-// Theme
-document.getElementById('toggleTheme').onclick=()=>{
-document.body.classList.toggle('light');
-};
-
-// PDF
-document.getElementById('exportPDF').onclick=()=>window.print();
-
-// Buttons
 const ctrl=document.querySelector('.controls');
 [
 ["Goal",goal],
@@ -240,6 +287,7 @@ const ctrl=document.querySelector('.controls');
 ["Predict",predictor]
 ].forEach(([t,f])=>{
 let b=document.createElement('button');
+b.className="btn-ghost";
 b.textContent=t;
 b.onclick=f;
 ctrl.appendChild(b);
