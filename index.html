@@ -47,6 +47,9 @@ th{background:rgba(96,165,250,.05);font-weight:700;color:var(--accent)}
 .input-cell input:focus{outline:none;border-color:var(--accent)}
 .input-cell input:invalid{border-color:#ef4444}
 
+.input-cell select{background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:7px 8px;color:inherit;width:100%;font-size:13px}
+.input-cell select:focus{outline:none;border-color:var(--accent)}
+
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
 .stat-box{background:rgba(96,165,250,.05);padding:10px 12px;border-radius:8px;border:1px solid rgba(96,165,250,.1)}
 .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
@@ -68,13 +71,20 @@ th{background:rgba(96,165,250,.05);font-weight:700;color:var(--accent)}
 .target-result-status{font-size:12px;color:var(--muted);margin-top:6px}
 
 .chart-container{margin:16px 0;padding:12px;background:rgba(96,165,250,.05);border-radius:8px;border:1px solid rgba(96,165,250,.1)}
-svg{width:100%;height:auto}
 
 .analytics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px}
 .analytics-box{background:rgba(96,165,250,.05);padding:12px;border-radius:8px;border:1px solid rgba(96,165,250,.1)}
 .analytics-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
 .analytics-value{font-size:16px;font-weight:700;color:var(--accent);margin-top:4px}
-.analytics-detail{font-size:11px;color:var(--muted);margin-top:4px}
+
+.profile-selector{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.profile-selector select{background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:8px;color:inherit;font-size:13px;flex:1;min-width:150px}
+.profile-selector select:focus{outline:none;border-color:var(--accent)}
+
+.grade-scale-row{display:grid;grid-template-columns:80px 80px 150px 100px;gap:12px;padding:8px;border-bottom:1px solid var(--border);font-size:12px}
+.grade-scale-row:first-child{background:rgba(96,165,250,.05);font-weight:700}
+
+.simulator-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;padding:8px;background:rgba(96,165,250,.05);border-radius:6px}
 
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:1000;justify-content:center;align-items:center}
 .modal.show{display:flex}
@@ -90,6 +100,8 @@ button{width:100%}
 th,td{padding:8px 6px;font-size:12px}
 .hero-stats{grid-template-columns:repeat(2,1fr)}
 .target-grid{grid-template-columns:1fr}
+.grade-scale-row{grid-template-columns:1fr}
+.simulator-grid{grid-template-columns:1fr}
 }
 
 .print-hide{display:none}
@@ -117,6 +129,22 @@ body{background:white;color:black}
 <div class="hero-stat">
 <div class="hero-stat-label">Total Credits</div>
 <div class="hero-stat-value" id="heroCredits">0</div>
+</div>
+</div>
+
+<!-- Profile Manager -->
+<div class="card print-hide">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<div style="font-size:13px;color:var(--muted)">📁 Active Semester:</div>
+<button id="toggleTheme" class="btn-ghost btn-small">🌙 Theme</button>
+</div>
+
+<div class="profile-selector">
+<select id="profileSelect" onchange="switchProfile()">
+<option value="default">Default</option>
+</select>
+<button class="btn-primary btn-small" onclick="saveProfile()">Save As New</button>
+<button class="btn-ghost btn-small" onclick="deleteProfile()">Delete</button>
 </div>
 </div>
 
@@ -169,6 +197,106 @@ body{background:white;color:black}
 </div>
 </div>
 
+<!-- What-If Simulator -->
+<div class="card print-hide">
+<div class="card-title" onclick="toggleCard(this)">
+🔮 What-If Simulator
+<span class="card-collapse">▼</span>
+</div>
+
+<div class="card-content">
+<div class="hint">Experiment with different grades to see projected SGPA. Your actual data won't change.</div>
+
+<div id="simulatorCourses"></div>
+
+<button id="addSimulatorCourse" class="btn-primary btn-small" style="margin-bottom:12px">+ Add Course</button>
+
+<div style="background:rgba(96,165,250,.05);padding:12px;border-radius:8px;border:1px solid rgba(96,165,250,.1);margin-top:12px">
+<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Projected SGPA</div>
+<div style="font-size:24px;font-weight:800;color:var(--accent);margin-top:6px" id="projectedSGPA">0.00</div>
+</div>
+
+<button id="clearSimulator" class="btn-ghost btn-small" style="margin-top:12px">Clear All</button>
+</div>
+</div>
+
+<!-- Grade Scale Reference -->
+<div class="card print-hide">
+<div class="card-title" onclick="toggleCard(this)">
+📋 Grade Scale (KTU 2024)
+<span class="card-collapse">▼</span>
+</div>
+
+<div class="card-content">
+<div class="grade-scale-row">
+<div><strong>Grade</strong></div>
+<div><strong>Points</strong></div>
+<div><strong>Marks Range</strong></div>
+<div><strong>Status</strong></div>
+</div>
+<div class="grade-scale-row">
+<div>S</div>
+<div>10</div>
+<div>90-100</div>
+<div>Outstanding</div>
+</div>
+<div class="grade-scale-row">
+<div>A+</div>
+<div>9</div>
+<div>85-89</div>
+<div>Excellent</div>
+</div>
+<div class="grade-scale-row">
+<div>A</div>
+<div>8.5</div>
+<div>80-84</div>
+<div>Very Good</div>
+</div>
+<div class="grade-scale-row">
+<div>B+</div>
+<div>8</div>
+<div>75-79</div>
+<div>Good</div>
+</div>
+<div class="grade-scale-row">
+<div>B</div>
+<div>7.5</div>
+<div>70-74</div>
+<div>Above Average</div>
+</div>
+<div class="grade-scale-row">
+<div>C+</div>
+<div>7</div>
+<div>65-69</div>
+<div>Average</div>
+</div>
+<div class="grade-scale-row">
+<div>C</div>
+<div>6.5</div>
+<div>60-64</div>
+<div>Satisfactory</div>
+</div>
+<div class="grade-scale-row">
+<div>D</div>
+<div>6</div>
+<div>55-59</div>
+<div>Pass</div>
+</div>
+<div class="grade-scale-row">
+<div>P</div>
+<div>5.5</div>
+<div>50-54</div>
+<div>Barely Pass</div>
+</div>
+<div class="grade-scale-row">
+<div>F</div>
+<div>0</div>
+<div>0-49</div>
+<div>Fail</div>
+</div>
+</div>
+</div>
+
 <!-- Target GPA Calculator -->
 <div class="card print-hide">
 <div class="card-title" onclick="toggleCard(this)">
@@ -176,7 +304,7 @@ body{background:white;color:black}
 <span class="card-collapse">▼</span>
 </div>
 
-<div class="card-content show">
+<div class="card-content">
 <div class="hint">What SGPA do you need to reach your goal CGPA?</div>
 
 <div class="target-grid">
@@ -220,12 +348,6 @@ body{background:white;color:black}
 </div>
 </div>
 
-<!-- Semester Trend Chart -->
-<div id="chartContainer" class="chart-container" style="display:none">
-<canvas id="trendChart"></canvas>
-</div>
-
-<!-- Analytics -->
 <div id="analyticsContainer" style="display:none;margin-top:16px">
 <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent)">Performance Breakdown</div>
 <div class="analytics-grid">
@@ -249,10 +371,10 @@ body{background:white;color:black}
 </div>
 
 <div class="controls" style="margin-top:16px">
-<button id="exportPDF" class="btn-ghost">📥 Export as PDF</button>
-<button id="exportJSON" class="btn-ghost">💾 Backup Data</button>
-<button id="importJSON" class="btn-ghost">📤 Restore Data</button>
-<button id="resetAll" class="btn-ghost btn-danger">Delete All</button>
+<button id="exportPDF" class="btn-ghost print-hide">📥 Export as PDF</button>
+<button id="exportJSON" class="btn-ghost print-hide">💾 Backup Data</button>
+<button id="importJSON" class="btn-ghost print-hide">📤 Restore Data</button>
+<button id="resetAll" class="btn-ghost btn-danger print-hide">Delete All</button>
 </div>
 
 <input type="file" id="jsonInput" accept=".json" style="display:none">
@@ -273,6 +395,18 @@ body{background:white;color:black}
 </div>
 </div>
 
+<div id="profileModal" class="modal">
+<div class="modal-content">
+<div class="modal-title">Save New Semester Profile</div>
+<label style="font-size:12px;color:var(--muted)">Profile Name (e.g., S1, S2, Backup)</label>
+<input type="text" id="profileName" class="modal-input" placeholder="S1">
+<div class="modal-buttons">
+<button class="btn-ghost" onclick="closeProfileModal()">Cancel</button>
+<button class="btn-primary" onclick="confirmSaveProfile()">Save</button>
+</div>
+</div>
+</div>
+
 <script>
 const courseBody=document.getElementById('courseBody');
 const totalCreditsEl=document.getElementById('totalCredits');
@@ -282,25 +416,103 @@ const cgpaEl=document.getElementById('cgpa');
 const lockedBanner=document.getElementById('lockedBanner');
 
 let cgpaSems=[],locked=false;
+let allProfiles={};
+let currentProfile='default';
 
-// Load data from localStorage
+// Grade data
+const grades={
+'S':[10,90,100],
+'A+':[9,85,89],
+'A':[8.5,80,84],
+'B+':[8,75,79],
+'B':[7.5,70,74],
+'C+':[7,65,69],
+'C':[6.5,60,64],
+'D':[6,55,59],
+'P':[5.5,50,54],
+'F':[0,0,49]
+};
+
 function loadData(){
-const saved=localStorage.getItem('ktuCalcData');
+const saved=localStorage.getItem('ktuCalcProfiles');
 if(saved){
 try{
-const data=JSON.parse(saved);
-cgpaSems=data.cgpaSems||[];
-locked=data.locked||false;
+allProfiles=JSON.parse(saved);
+if(!allProfiles.default)allProfiles.default={cgpaSems:[],locked:false,courses:[]};
+populateProfileSelector();
+switchProfile('default');
+}catch(e){
+allProfiles={default:{cgpaSems:[],locked:false,courses:[]}};
+}
+}else{
+allProfiles={default:{cgpaSems:[],locked:false,courses:[]}};
+}
+}
+
+function saveData(){
+localStorage.setItem('ktuCalcProfiles',JSON.stringify(allProfiles));
+}
+
+function populateProfileSelector(){
+const select=document.getElementById('profileSelect');
+select.innerHTML='';
+Object.keys(allProfiles).forEach(name=>{
+const opt=document.createElement('option');
+opt.value=name;
+opt.textContent=name;
+select.appendChild(opt);
+});
+}
+
+function switchProfile(name){
+if(!name)name=document.getElementById('profileSelect').value;
+if(!allProfiles[name]){
+alert('Profile not found');
+return;
+}
+
+// Save current profile
+allProfiles[currentProfile]={cgpaSems,locked,courses:Array.from(courseBody.children).map(tr=>({
+course:tr.children[0].firstChild.value,
+type:tr.dataset.type,
+credits:Number(tr.children[2].firstChild.value),
+cia:Number(tr.children[3].firstChild.value),
+ese:Number(tr.children[4].firstChild.value)
+}))};
+
+currentProfile=name;
+const profile=allProfiles[name];
+cgpaSems=JSON.parse(JSON.stringify(profile.cgpaSems));
+locked=profile.locked;
+
+// Load courses
+courseBody.innerHTML='';
+(profile.courses||[]).forEach(c=>{
+createRowFromData(c.type,c.course,c.credits,c.cia,c.ese);
+});
+
+document.getElementById('profileSelect').value=name;
 renderCgpa();
 updateLockedBanner();
 updateHeroStats();
-}catch(e){console.error('Load error:',e);}
-}
+saveData();
 }
 
-// Save data to localStorage
-function saveData(){
-localStorage.setItem('ktuCalcData',JSON.stringify({cgpaSems,locked}));
+function createRowFromData(type,course,credits,cia,ese){
+const tr=document.createElement('tr');
+tr.dataset.type=type;
+tr.innerHTML=`
+<td class="input-cell"><input value="${course}" required></td>
+<td>${type}</td>
+<td class="input-cell"><input type="number" value="${credits}" min="1" max="5" required></td>
+<td class="input-cell"><input type="number" value="${cia||''}" min="0" max="40" step="0.5"></td>
+<td class="input-cell"><input type="number" value="${ese||''}" min="0" max="100" step="0.5"></td>
+<td>-</td><td>-</td><td>-</td>
+<td><button class="btn-danger btn-small">×</button></td>
+`;
+tr.querySelectorAll('input').forEach(i=>i.oninput=calc);
+tr.querySelector('button').onclick=()=>{tr.remove();calc();};
+courseBody.appendChild(tr);
 }
 
 function gradeFromPercent(p){
@@ -335,24 +547,7 @@ if(locked){
 alert("Semester locked. Clear to add more courses.");
 return;
 }
-
-const tr=document.createElement('tr');
-tr.dataset.type=type;
-
-tr.innerHTML=`
-<td class="input-cell"><input placeholder="Eng-102" required></td>
-<td>${type}</td>
-<td class="input-cell"><input type="number" value="3" min="1" max="5" required></td>
-<td class="input-cell"><input type="number" placeholder="0-40" min="0" max="40" step="0.5"></td>
-<td class="input-cell"><input type="number" placeholder="0-100" min="0" max="100" step="0.5"></td>
-<td>-</td><td>-</td><td>-</td>
-<td><button class="btn-danger btn-small">×</button></td>
-`;
-
-tr.querySelectorAll('input').forEach(i=>i.oninput=calc);
-tr.querySelector('button').onclick=()=>{tr.remove();calc();};
-
-courseBody.appendChild(tr);
+createRowFromData(type,'',3,'','');
 calc();
 }
 
@@ -366,236 +561,4 @@ if(confirm('Clear all courses in this semester?')){
 courseBody.innerHTML='';
 calc();
 locked=false;
-updateLockedBanner();
-}
-};
-
-document.getElementById('resetAll').onclick=()=>{
-if(confirm('Delete ALL semesters and current courses? This cannot be undone.')){
-cgpaSems=[];
-courseBody.innerHTML='';
-locked=false;
-calc();
-renderCgpa();
-updateLockedBanner();
-saveData();
-}
-};
-
-document.getElementById('addSemToCgpa').onclick=()=>{
-let sg=parseFloat(sgpaEl.textContent)||0;
-let cr=parseFloat(totalCreditsEl.textContent)||0;
-
-if(cr<=0){alert('Add courses first');return;}
-if(sg===0){alert('Verify grades are entered');return;}
-
-let name=prompt("Semester name (e.g., S1, S2)","S"+(cgpaSems.length+1));
-if(!name)return;
-
-cgpaSems.push({sgpa:sg,credits:cr,name:name});
-locked=true;
-renderCgpa();
-updateLockedBanner();
-saveData();
-};
-
-function calc(){
-let tc=0,ws=0;
-
-[...courseBody.children].forEach(tr=>{
-let type=tr.dataset.type;
-let courseName=tr.children[0].firstChild.value;
-let c=Number(tr.children[2].firstChild.value)||0;
-let cia=Number(tr.children[3].firstChild.value);
-let ese=Number(tr.children[4].firstChild.value);
-
-if(!courseName){
-tr.children[6].textContent='—';
-tr.children[7].textContent='—';
-tr.children[5].textContent='—';
-return;
-}
-
-if(cia<0 || cia>40){
-tr.style.background='rgba(239,68,68,.1)';
-}else{tr.style.background='';}
-
-let total=cia+ese;
-let grade,gp;
-
-if(type==="Challenge"){
-if(ese<36 || ese===0){grade='F';gp=0;}
-else{[grade,gp]=gradeFromPercent(ese);}
-total=ese;
-}else{
-if(cia===0 || ese===0){grade='—';gp='—';total='—';}
-else{[grade,gp]=gradeFromPercent(total);}
-}
-
-tr.children[5].textContent=typeof total==='number'?total.toFixed(1):total;
-tr.children[6].textContent=grade;
-tr.children[7].textContent=typeof gp==='number'?gp:gp;
-
-if(typeof gp==='number'){
-tc+=c;
-ws+=c*gp;
-}
-});
-
-totalCreditsEl.textContent=tc;
-sgpaEl.textContent=tc?(ws/tc).toFixed(2):'0.00';
-updateHeroStats();
-}
-
-function renderCgpa(){
-cgpaBody.innerHTML='';
-let sum=0,cr=0;
-
-cgpaSems.forEach((s,i)=>{
-const tr=document.createElement('tr');
-tr.innerHTML=`
-<td>${s.name}</td>
-<td style="font-weight:700;color:var(--accent)">${s.sgpa}</td>
-<td>${s.credits}</td>
-<td><button class="btn-danger btn-small">×</button></td>
-`;
-tr.querySelector('button').onclick=()=>{
-if(confirm('Delete this semester?')){
-cgpaSems.splice(i,1);
-if(cgpaSems.length===0)locked=false;
-updateLockedBanner();
-renderCgpa();
-saveData();
-}
-};
-cgpaBody.appendChild(tr);
-sum+=s.sgpa*s.credits;
-cr+=s.credits;
-});
-
-cgpaEl.textContent=cr?(sum/cr).toFixed(2):'0.00';
-updateHeroStats();
-
-// Show/hide analytics
-if(cgpaSems.length>0){
-document.getElementById('analyticsContainer').style.display='block';
-updateAnalytics();
-drawChart();
-}else{
-document.getElementById('analyticsContainer').style.display='none';
-document.getElementById('chartContainer').style.display='none';
-}
-
-saveData();
-}
-
-function updateAnalytics(){
-if(cgpaSems.length===0)return;
-
-let sgpas=cgpaSems.map(s=>parseFloat(s.sgpa));
-let highest=Math.max(...sgpas);
-let lowest=Math.min(...sgpas);
-let avg=(sgpas.reduce((a,b)=>a+b,0)/sgpas.length);
-let totalCr=cgpaSems.reduce((a,s)=>a+s.credits,0);
-
-document.getElementById('highestSGPA').textContent=highest.toFixed(2);
-document.getElementById('lowestSGPA').textContent=lowest.toFixed(2);
-document.getElementById('avgSGPA').textContent=avg.toFixed(2);
-document.getElementById('totalCredsAnalytics').textContent=totalCr;
-}
-
-function drawChart(){
-if(cgpaSems.length<2){
-document.getElementById('chartContainer').style.display='none';
-return;
-}
-
-document.getElementById('chartContainer').style.display='block';
-
-let canvas=document.getElementById('trendChart');
-let ctx=canvas.getContext('2d');
-canvas.width=canvas.offsetWidth;
-canvas.height=200;
-
-let padding=40;
-let width=canvas.width-padding*2;
-let height=canvas.height-padding*2;
-
-ctx.clearRect(0,0,canvas.width,canvas.height);
-
-// Draw grid
-ctx.strokeStyle='rgba(255,255,255,.1)';
-ctx.lineWidth=1;
-for(let i=0;i<=10;i++){
-let y=padding+height-((height/10)*i);
-ctx.beginPath();
-ctx.moveTo(padding,y);
-ctx.lineTo(canvas.width-padding,y);
-ctx.stroke();
-ctx.fillStyle='rgba(255,255,255,.3)';
-ctx.font='11px Inter';
-ctx.textAlign='right';
-ctx.fillText((i).toFixed(1),padding-8,y+3);
-}
-
-// Draw points and lines
-let sgpas=cgpaSems.map(s=>parseFloat(s.sgpa));
-let xStep=width/Math.max(cgpaSems.length-1,1);
-
-ctx.strokeStyle='#60a5fa';
-ctx.lineWidth=2;
-ctx.beginPath();
-
-sgpas.forEach((sgpa,i)=>{
-let x=padding+i*xStep;
-let y=padding+height-(((sgpa/10)*height));
-
-if(i===0)ctx.moveTo(x,y);
-else ctx.lineTo(x,y);
-});
-ctx.stroke();
-
-// Draw points
-ctx.fillStyle='#60a5fa';
-sgpas.forEach((sgpa,i)=>{
-let x=padding+i*xStep;
-let y=padding+height-(((sgpa/10)*height));
-ctx.beginPath();
-ctx.arc(x,y,5,0,Math.PI*2);
-ctx.fill();
-});
-
-// Labels
-ctx.fillStyle='rgba(255,255,255,.6)';
-ctx.font='11px Inter';
-ctx.textAlign='center';
-cgpaSems.forEach((sem,i)=>{
-let x=padding+i*xStep;
-ctx.fillText(sem.name,x,canvas.height-10);
-});
-}
-
-// Target SGPA Calculator
-document.getElementById('targetCGPA').oninput=updateTargetSGPA;
-document.getElementById('remainingSems').oninput=updateTargetSGPA;
-
-function updateTargetSGPA(){
-let currentCGPA=parseFloat(cgpaEl.textContent)||0;
-let currentCredits=cgpaSems.reduce((a,s)=>a+s.credits,0);
-let targetCGPA=parseFloat(document.getElementById('targetCGPA').value)||0;
-let remainingSems=parseInt(document.getElementById('remainingSems').value)||0;
-
-if(targetCGPA<=0 || remainingSems<=0){
-document.getElementById('requiredSGPA').textContent='—';
-document.getElementById('targetStatus').textContent='';
-return;
-}
-
-// Formula: (target*total_credits_needed - current*current_credits) / remaining_credits
-let totalCreditsNeeded=currentCredits+(remainingSems*3.5); // Avg 3.5 credits per sem
-let requiredTotal=targetCGPA*totalCreditsNeeded;
-let currentTotal=currentCGPA*currentCredits;
-let remainingCredits=remainingSems*3.5;
-
-let requiredSGPA=(requiredTotal-currentTotal)/remainingCredits;
-re
+upd
